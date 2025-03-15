@@ -83,15 +83,17 @@ public class GameManager : MonoBehaviour
     public void ExhaustiveDraw()
     {
         
-        Debug.Log("ExhaustiveDraw");
+        //Debug.Log("ExhaustiveDraw");
         NextRound();
     }
 
     public void NextRound() //TODO вариант без смены ветров
     {
+        //Debug.Log("Next Round");
         foreach (var player in Players)
         {
             player.Clear();
+            player.PlayerDiscardView.Draw(player.Discard);
         }
 
         

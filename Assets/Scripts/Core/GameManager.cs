@@ -125,8 +125,10 @@ public class GameManager : MonoBehaviour
         //Debug.Log("HandleTileCLick");
         Players[0].DiscardTile(clickedTile);
         Players[0].PlayerDiscardView.Draw(Players[0].Discard);
-        //Player1DiscardView.Draw(Players[0].Discard);
+
+        PlayerHandView.Sort(Players[0].Hand);
         PlayerHandView.Draw(Players[0].Hand);
+        EndTurn();
     }
 
 }

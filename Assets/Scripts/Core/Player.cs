@@ -91,7 +91,8 @@ public class RealPlayer : IPlayer
     {
         Hand.Remove(tile);
         Discard.Add(tile);
-        GameManager.EndTurn();
+        
+        
     }
     public void StartTurn()
     {

@@ -11,16 +11,18 @@ public class Tile
 
     public List<string> Properties { get; private set; }
 
-    public Tile(string suit, string rank, bool isHonor = false)
+    public Tile(string suit, string rank, bool isHonor = false,string property=null)
     {
         Suit = suit;
         Rank = rank;
         IsHonor = isHonor;
         Properties = new List<string>();
+        if (property != null ) Properties.Add(property);
     }
 
     public override string ToString()
     {
+        if (Properties.Contains("Red")) return $"Red{Rank}{Suit}";
         return $"{Rank}{Suit}";
     }
 

@@ -9,8 +9,14 @@ public class GameManager : MonoBehaviour
     public PlayerDiscardView Player2DiscardView;
     public PlayerDiscardView Player3DiscardView;
     public PlayerDiscardView Player4DiscardView;
+    public CenterView CenterView;
+    public DoraIndicatorView DoraIndicatorView;
     public List<IPlayer> Players { get; private set; }
     public List<Tile> Wall { get; private set; }
+    public List<Tile> DoraIndicator { get; private set; }=new List<Tile>();
+    public List<Tile> UraDoraIndicator { get; private set; } =new List<Tile>();
+    public List<Tile> KanTiles { get; private set; } = new List<Tile>();
+    public int DorasShown { get; private set; }
     public int ActivePlayer {  get; private set; }
     public int Dealer { get; private set; }
     public string RoundWind {  get; private set; }
@@ -32,6 +38,8 @@ public class GameManager : MonoBehaviour
             new AiPlayer("Player 3", this,Player3DiscardView),
             new AiPlayer("Player 4", this,Player4DiscardView)
         };
+        foreach (var player in Players) 
+            player.Score = 25000;
 
         //Players.Add(new RealPlayer("Player 1",this));
         //Players.Add(new AiPlayer("Player 2",this));
@@ -51,6 +59,7 @@ public class GameManager : MonoBehaviour
         currentPlayer.AddTile(Wall[0]);
         Wall.RemoveAt(0);
         PlayerHandView.Draw(Players[0].Hand);
+        CenterView.UpdateTilesRemaining(Wall.Count);
         currentPlayer.StartTurn();
     }
 
@@ -69,6 +78,9 @@ public class GameManager : MonoBehaviour
         SetWinds();
 
         Wall = TileFactory.CreateWall();
+        DoraIndicator.Clear();
+        UraDoraIndicator.Clear();
+        KanTiles.Clear();
 
         for (int j=0;j<4;j++)
             for (int i = 0; i < 13; i++)
@@ -76,14 +88,32 @@ public class GameManager : MonoBehaviour
                 Players[j].AddTile(Wall[0]);
                 Wall.RemoveAt(0);
             }
+        for (int j=0;j<5; j++)
+        {
+            DoraIndicator.Add(Wall[0]);
+            Wall.RemoveAt(0);
+        }
+        for (int j = 0; j < 5; j++)
+        {
+            UraDoraIndicator.Add(Wall[0]);
+            Wall.RemoveAt(0);
+        }
+        for (int j = 0; j < 4; j++)
+        {
+            KanTiles.Add(Wall[0]);
+            Wall.RemoveAt(0);
+        }
+
+        DorasShown = 1;
+        DoraIndicatorView.Draw(DoraIndicator,DorasShown);
         PlayerHandView.Draw(Players[0].Hand);
+        CenterView.UpdateWinds(Players[0].Wind, Players[1].Wind, Players[2].Wind, Players[3].Wind);
+        CenterView.UpdateScore(Players[0].Score, Players[1].Score, Players[2].Score, Players[3].Score);
         StartTurn();
     }
 
     public void ExhaustiveDraw()
     {
-        
-        //Debug.Log("ExhaustiveDraw");
         NextRound();
     }
 
@@ -105,11 +135,12 @@ public class GameManager : MonoBehaviour
         PrepareRound();
     }
 
-    public void SetWinds()
+    public void SetWinds() //Смена ветров
     {
         List<string> winds = new List<string>() { "East", "South", "West", "North" };
 
-        if (ActivePlayer==-1) Dealer=ActivePlayer = Random.Range(0,4);
+        if (ActivePlayer==-1) Dealer=ActivePlayer = Random.Range(0,4); // Если начало игры то рандомно
+                                                                       // выбираем дилера
 
         int x = Dealer;
         for (int i = 0; i < 4; i++)

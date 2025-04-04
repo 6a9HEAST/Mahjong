@@ -10,6 +10,7 @@ public interface IPlayer
     public string Wind {  get; set; }
     public GameManager GameManager { get; set; }
     public PlayerDiscardView PlayerDiscardView { get; set; }
+    public int Score { get; set; }
     public abstract void AddTile(Tile tile);
 
     public abstract void StartTurn();
@@ -33,6 +34,7 @@ public class AiPlayer : IPlayer
     public string Wind { get; set; }
     public GameManager GameManager { get; set; }
     public PlayerDiscardView PlayerDiscardView { get; set; }
+    public int Score { get; set; }
     public AiPlayer(string name, GameManager gameManager, PlayerDiscardView playerDiscardView)
     {
         Name = name;
@@ -73,6 +75,7 @@ public class RealPlayer : IPlayer
     public string Wind { get; set; }
     public GameManager GameManager { get; set; }
     public PlayerDiscardView PlayerDiscardView { get; set; }
+    public int Score { get; set; }
     public RealPlayer(string name, GameManager gameManager, PlayerDiscardView playerDiscardView)
     {
         Name = name;

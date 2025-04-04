@@ -15,22 +15,13 @@ public class PlayerHandView : MonoBehaviour
         }
         
         // Отобразите каждую плитку в руке
-        for (int i = 0; i < hand.Count; i++)            //(hand.Count == 13 ? hand.Count : hand.Count - 1); i++)
+        for (int i = 0; i < hand.Count; i++)        
         {
             GameObject tileObject = Instantiate(TilePrefab, HandContainer);
             TileView tileView = tileObject.GetComponent<TileView>();
             tileView.SetTile(hand[i]);
             tileView.OnTileClicked.AddListener(GameManager.HandleTileClick);
         }
-        //if (hand.Count == 13) return;
-
-        //GameObject TsumoObject = Instantiate(TilePrefab, HandContainer);
-        //TileView TsumoView = TsumoObject.GetComponent<TileView>();
-        //TsumoView.SetTile(hand[^1]); // ^1 возвращает первый элемент с конца
-        //TsumoView.OnTileClicked.AddListener(GameManager.HandleTileClick);
-        //// Сместите четырнадцатый тайл вправо
-        //var rectTransform = TsumoObject.GetComponent<RectTransform>();
-        //rectTransform.anchoredPosition += new Vector2(0f, 0f);
     }
 
     public void Sort(List<Tile> hand)

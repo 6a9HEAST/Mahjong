@@ -26,7 +26,7 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("Игра началась");
         TileSpriteManager.Initialize();
-
+        //CenterView.OnCenterClicked.AddListener(HandleCenterClick);
         RoundWind = "East";
         RoundNumber = 1;
         RepeatCounter = 0;
@@ -41,10 +41,6 @@ public class GameManager : MonoBehaviour
         foreach (var player in Players) 
             player.Score = 25000;
 
-        //Players.Add(new RealPlayer("Player 1",this));
-        //Players.Add(new AiPlayer("Player 2",this));
-        //Players.Add(new AiPlayer("Player 3", this));
-        //Players.Add(new AiPlayer("Player 4", this));
 
         ActivePlayer = -1;
 
@@ -109,11 +105,16 @@ public class GameManager : MonoBehaviour
         PlayerHandView.Draw(Players[0].Hand);
         CenterView.UpdateWinds(Players[0].Wind, Players[1].Wind, Players[2].Wind, Players[3].Wind);
         CenterView.UpdateScore(Players[0].Score, Players[1].Score, Players[2].Score, Players[3].Score);
+        CenterView.UpdateRoundWind(RoundWind);
         StartTurn();
     }
 
     public void ExhaustiveDraw()
     {
+        //Players[0].Score += 1500; ТЕСТЫ
+        //Players[1].Score -= 2000;
+        //Players[2].Score += 8000;
+        //RoundWind = "South";
         NextRound();
     }
 
@@ -161,6 +162,41 @@ public class GameManager : MonoBehaviour
         PlayerHandView.Draw(Players[0].Hand);
         EndTurn();
     }
+
+    public void CheckForCalls(Tile tile,IPlayer sender)
+    {
+        foreach (var player in Players)
+        {
+            if ( player.CheckForPon(tile)) //Проверка может ли кто то из игроков объявить пон
+            {
+                Debug.Log(player.Name + " has pon of " + tile.ToString());
+            }
+
+            if (player.CheckForKan(tile)) //Проверка может ли кто то из игроков объявить кан
+            {
+                Debug.Log(player.Name + " has kan of " + tile.ToString());
+            }
+        }
+
+        //Проверка может ли кто то из игроков объявить чи
+
+        int index = Players.IndexOf(sender); //Получаем индекс игрока который сделал ход
+        index = (index + 1) % 4;// Получаем индекс игрока справа от него
+
+        if (tile.Suit == "Dragon" || tile.Suit == "Wind") return;
+        var chis = Players[index].CheckForChi(tile);//Получаем список возможных чи
+        if (chis == null) return;
+        foreach (var chi in chis)
+        {
+            Debug.Log(Players[index].Name + " has chi of " + chi[0].ToString() + " " + chi[1].ToString() + " " + chi[2].ToString());
+        }
+
+    }
+
+    //public void HandleCenterClick()
+    //{
+
+    //}
 
 }
 

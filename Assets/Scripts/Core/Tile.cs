@@ -2,6 +2,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 
 public class Tile 
 {
@@ -18,6 +19,11 @@ public class Tile
         IsHonor = isHonor;
         Properties = new List<string>();
         if (property != null ) Properties.Add(property);
+    }
+
+    public bool IsRedFive()
+    {
+        return int.Parse(Rank) == 5 && Properties.Contains("Red");
     }
 
     public override string ToString()

@@ -26,9 +26,14 @@ public class PlayerHandView : MonoBehaviour
 
     public void Sort(List<Tile> hand)
     {
-        for (int i = 0; i < hand.Count - 1; i++)
+        int count;
+        if (hand.Count%3==1)
+            count=hand.Count;
+        else count=hand.Count-1;
+
+        for (int i = 0; i < count - 1; i++)
         {
-            for (int j = 0; j < hand.Count - i - 1; j++)
+            for (int j = 0; j < count - i - 1; j++)
             {
                 if (IsBigger(hand[j], hand[j+1]))
                 {

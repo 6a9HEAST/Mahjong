@@ -3,6 +3,8 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
 using Unity.VisualScripting;
+using System.Xml.Linq;
+using System;
 
 public class Tile 
 {
@@ -16,7 +18,10 @@ public class Tile
     {
         Suit = suit;
         Rank = rank;
-        IsHonor = isHonor;
+        if (suit == "Dragon" || suit == "Wind")
+            IsHonor = true;
+        else IsHonor = false;
+        //IsHonor = isHonor;
         Properties = new List<string>();
         if (property != null ) Properties.Add(property);
     }
@@ -32,6 +37,21 @@ public class Tile
         return $"{Rank}{Suit}";
     }
 
-    
+    public override bool Equals(object obj)
+    {
+        if (obj is not Tile other)
+            return false;
+        return Suit == other.Suit && Rank == other.Rank;
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Suit, Rank);
+    }
+
+    public Tile Clone()
+    {
+        return new Tile(Suit, Rank);
+    }
 }
 

@@ -1029,6 +1029,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   CallPrefab: {fileID: 2415251851206177233, guid: 36769c815542ea645969b852bfc93f4e, type: 3}
   TilePrefab: {fileID: 7724748045697276325, guid: 39d4b7a57d3eb9845ad9b57f14d22e10, type: 3}
+  TileBackPrefab: {fileID: 1275032583}
   CallContainer: {fileID: 318218586}
 --- !u!223 &318218588
 Canvas:
@@ -1845,6 +1846,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   CallPrefab: {fileID: 2415251851206177233, guid: 36769c815542ea645969b852bfc93f4e, type: 3}
   TilePrefab: {fileID: 7724748045697276325, guid: 39d4b7a57d3eb9845ad9b57f14d22e10, type: 3}
+  TileBackPrefab: {fileID: 1275032583}
   CallContainer: {fileID: 687438422}
 --- !u!223 &687438424
 Canvas:
@@ -2871,6 +2873,11 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1221374253}
   m_CullTransparentMesh: 1
+--- !u!1 &1275032583 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6088083231615672307, guid: 1801d78e298aea543ba650f389050bb1, type: 3}
+  m_PrefabInstance: {fileID: 8467861857720410300}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1297854205
 GameObject:
   m_ObjectHideFlags: 0
@@ -3449,6 +3456,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   CallPrefab: {fileID: 2415251851206177233, guid: 36769c815542ea645969b852bfc93f4e, type: 3}
   TilePrefab: {fileID: 7724748045697276325, guid: 39d4b7a57d3eb9845ad9b57f14d22e10, type: 3}
+  TileBackPrefab: {fileID: 1275032583}
   CallContainer: {fileID: 1521099910}
 --- !u!223 &1521099912
 Canvas:
@@ -3976,6 +3984,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   CallPrefab: {fileID: 2415251851206177233, guid: 36769c815542ea645969b852bfc93f4e, type: 3}
   TilePrefab: {fileID: 7724748045697276325, guid: 39d4b7a57d3eb9845ad9b57f14d22e10, type: 3}
+  TileBackPrefab: {fileID: 1275032583}
   CallContainer: {fileID: 1961568477}
 --- !u!223 &1961568479
 Canvas:

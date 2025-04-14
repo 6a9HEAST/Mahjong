@@ -65,6 +65,9 @@ public class GameManager : MonoBehaviour
             currentPlayer.AddTile(Wall[0]);
             Wall.RemoveAt(0);
         }
+
+        Players[ActivePlayer].HandAnalyzer.AnalyzeHand();
+
         PlayerHandView.Draw(Players[0].Hand);
         CenterView.UpdateTilesRemaining(Wall.Count);
         currentPlayer.StartTurn();
@@ -103,7 +106,7 @@ public class GameManager : MonoBehaviour
         for (int j = 0; j < 4; j++)
             for (int i = 0; i < 13; i++)
             {
-                Players[j].AddTile(Wall[0]);
+                Players[j].AddTile(Wall[0],true);
                 Wall.RemoveAt(0);
             }
         for (int j = 0; j < 5; j++)

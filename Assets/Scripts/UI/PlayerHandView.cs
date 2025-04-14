@@ -80,6 +80,5 @@ public class PlayerHandView : MonoBehaviour
         else
             return RankOrder[tile1.Suit] > RankOrder[tile2.Suit];
 
-
     }
 }

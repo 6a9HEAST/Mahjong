@@ -144,7 +144,7 @@ public class CallContainerView : MonoBehaviour
             GameObject trioGroup = new GameObject("NormalTilesGroup", typeof(RectTransform));
             trioGroup.transform.SetParent(tileContainer, false);
             HorizontalLayoutGroup trioHLG = trioGroup.AddComponent<HorizontalLayoutGroup>();
-            trioHLG.spacing = 5f; // Отступ между тайлами внутри тройки
+            trioHLG.spacing = 1.3f; // Отступ между тайлами внутри тройки
             trioHLG.childAlignment = TextAnchor.MiddleCenter;
             trioHLG.childForceExpandHeight = false;
             trioHLG.childForceExpandWidth = false;

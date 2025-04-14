@@ -23,8 +23,9 @@ public interface IPlayer
     public (Tile tile, IPlayer player) pon { get; set; }
     public (Tile tile, IPlayer player) kan { get; set; }
     public (List<List<Tile>>, IPlayer player) chi { get; set; }
+    public HandAnalyzer HandAnalyzer { get; set; }
 
-    public abstract void AddTile(Tile tile);
+    public abstract void AddTile(Tile tile, bool isRoundStart = false);
     public abstract void StartTurn();
     public abstract void CallChi(List<Tile> tiles);
     public abstract void CallPon();
@@ -143,6 +144,7 @@ public class AiPlayer : IPlayer
     public (Tile tile, IPlayer player) kan { get; set; }
     public (List<List<Tile>>, IPlayer player) chi { get; set; }
     public List<List<Tile>> Calls { get; set; }
+    public HandAnalyzer HandAnalyzer { get; set; }
 
     public AiPlayer(string name, GameManager gameManager, PlayerDiscardView playerDiscardView,
         CallContainerView callContainerView,int index)
@@ -161,9 +163,10 @@ public class AiPlayer : IPlayer
         this.index = index;
         CallContainerView = callContainerView;
         IsOpen=false;
+        HandAnalyzer = new HandAnalyzer(this);
     }
 
-    public void AddTile(Tile tile)
+    public void AddTile(Tile tile,bool isRoundStart=false)
     {
         Hand.Add(tile);
     }
@@ -247,6 +250,7 @@ public class RealPlayer : IPlayer
     public (Tile tile, IPlayer player) kan { get; set; }
     public (List<List<Tile>>, IPlayer player) chi { get; set; }
     public List<List<Tile>> Calls { get; set; }
+    public HandAnalyzer HandAnalyzer { get; set; }
 
     public RealPlayer(string name, GameManager gameManager, PlayerDiscardView playerDiscardView,
         CallContainerView callContainerView,int index)
@@ -265,18 +269,22 @@ public class RealPlayer : IPlayer
         this.index = index;
         CallContainerView = callContainerView;
         IsOpen = false;
+        HandAnalyzer = new HandAnalyzer(this);
     }
 
-    public void AddTile(Tile tile)
+    public void AddTile(Tile tile,bool isRoundStart=false)
     {
         Hand.Add(tile);
-        var kanCheck = CheckForKan(tile);
-
-        if (kanCheck==2||kanCheck==1)
-            { 
-            kan = (tile, this);
-            ProceedCalls();
-            }
+        if (!isRoundStart)
+        {
+            var kanCheck = CheckForKan(tile);
+            if (kanCheck==2||kanCheck==1)
+                { 
+                kan = (tile, this);
+                ProceedCalls();
+                }
+            
+        }
         if (TileCounts.ContainsKey(tile.ToString()))
             TileCounts[tile.ToString()]++;
         else
@@ -473,6 +481,7 @@ public class RealPlayer : IPlayer
         GameManager.RevealDora();
         GameManager.PlayerHandView.Draw(Hand);
         ClearCalls();
+        GameManager.EndTurn(0);
         GameManager.CallsButtonsView.Clear();
     }
 

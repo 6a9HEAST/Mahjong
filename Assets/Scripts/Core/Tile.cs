@@ -53,5 +53,17 @@ public class Tile
     {
         return new Tile(Suit, Rank);
     }
+
+
+    /// <summary>
+    /// ѕреобразует ранг в число (если возможно). ≈сли преобразование не удалось Ц возвращает -1.
+    /// </summary>
+    public int TryGetRankAsInt()
+    {
+        int result;
+        if (int.TryParse(Rank, out result))
+            return result;
+        return -1;
+    }
 }
 

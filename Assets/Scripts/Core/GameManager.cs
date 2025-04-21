@@ -31,6 +31,11 @@ public class GameManager : MonoBehaviour
     public int RoundNumber { get; private set; }
     public int RepeatCounter { get; private set; }
 
+    public const bool TEST_HAND=true;
+    public List<Tile> TEST_TILES;
+
+    public float WAIT_TIME = 0.3f;
+
     // Список игроков, от которых ждём решения по вызовам (пон, чи, кан)
     private List<IPlayer> pendingCallPlayers = new List<IPlayer>();
 
@@ -62,11 +67,21 @@ public class GameManager : MonoBehaviour
         Players[ActivePlayer].IsActive = true;
         if (afterCall == -1)
         {
-            currentPlayer.AddTile(Wall[0]);
-            Wall.RemoveAt(0);
+            if (TEST_HAND && TEST_TILES.Count > 0 && ActivePlayer==0)
+            {
+                currentPlayer.AddTile(TEST_TILES[0]);
+                TEST_TILES.RemoveAt(0);
+            }
+            else
+
+            {
+                currentPlayer.AddTile(Wall[0]);
+                Wall.RemoveAt(0);
+            }
         }
 
-        Players[ActivePlayer].HandAnalyzer.AnalyzeHand();
+        //ПОСЛЕ ВЗЯТИЯ ТАЙЛА ЗАПУСК АНАЛИЗА РУКИ (ЕСЛИ РИИЧИ ТО НЕ ЗАПУСКАЕТСЯ)
+        if (!Players[ActivePlayer].Riichi) Players[ActivePlayer].HandAnalyzer.AnalyzeHand();
 
         PlayerHandView.Draw(Players[0].Hand);
         CenterView.UpdateTilesRemaining(Wall.Count);
@@ -88,13 +103,14 @@ public class GameManager : MonoBehaviour
             return;
         }
         Players[ActivePlayer].IsActive = false;
-        if (newActivePlayer == -1)
+
+        if (newActivePlayer == -1)//После объявления посылается индекс игрока который сделал объявление
             ActivePlayer = (ActivePlayer + 1) % 4;
         else ActivePlayer = newActivePlayer;
         StartTurn(newActivePlayer);
     }
 
-    public void PrepareRound() //TODO вариант без смены ветров
+    public void PrepareRound() 
     {
         SetWinds();
 
@@ -104,6 +120,7 @@ public class GameManager : MonoBehaviour
         KanTiles.Clear();
 
         for (int j = 0; j < 4; j++)
+            if (!(TEST_HAND&&j==0))//Если тестовая рука то не набираем игроку руку из стены
             for (int i = 0; i < 13; i++)
             {
                 Players[j].AddTile(Wall[0],true);
@@ -125,12 +142,47 @@ public class GameManager : MonoBehaviour
             Wall.RemoveAt(0);
         }
 
+        if (TEST_HAND) //Замена руки на тестовую
+        {
+
+            var hand = new List<Tile>() //13 тайлов
+            { 
+                new("Man", "1"),
+                new("Man", "2"),
+                new("Man", "3"),
+                new("Sou", "1"),
+                new("Sou", "2"),
+                new("Sou", "3"),
+                new("Pin", "1"),
+                new("Pin", "2"),
+                new("Man", "8"),
+                new("Dragon", "Green"),
+                new("Dragon", "Green"),
+                new("Dragon", "Green"),
+                new("Wind", "East"),
+            };
+
+            foreach (var tile in hand)
+            {
+                Players[0].AddTile(tile, true);
+            }
+
+                TEST_TILES = new List<Tile>() //СПИСОК ТАЙЛОВ КОТОРЫЕ БУДУТ ВЫДАВАТЬСЯ ИГРОКУ
+            {
+                new("Pin", "3"),
+                //new("Dragon", "Red"),
+                new("Wind", "East")
+            };
+        }
+
         DorasShown = 1;
         DoraIndicatorView.Draw(DoraIndicator, DorasShown);
         PlayerHandView.Draw(Players[0].Hand);
+
         CenterView.UpdateWinds(Players[0].Wind, Players[1].Wind, Players[2].Wind, Players[3].Wind);
         CenterView.UpdateScore(Players[0].Score, Players[1].Score, Players[2].Score, Players[3].Score);
         CenterView.UpdateRoundWind(RoundWind);
+
         PlayerHandView.Sort(Players[0].Hand);
 
         //for (int i = 0; i < 4; i++)
@@ -148,25 +200,32 @@ public class GameManager : MonoBehaviour
     public void ExhaustiveDraw()
     {
         // Обработка ситуация, когда тайлы закончились
+
         NextRound();
     }
 
-    public void NextRound() //TODO вариант без смены ветров
+    public void NextRound(int _Dealer=-1)
     {
         foreach (var player in Players)
         {
+            CallsButtonsView.Clear();
             player.Clear();
             player.ClearCalls();
             player.PlayerDiscardView.Draw(player.Discard);
+            player.Riichi = false;
         }
         RepeatCounter = 0;
         RoundNumber++;
-        Dealer = (Dealer + 1) % 4;
+        if (_Dealer==-1)
+            Dealer = (Dealer + 1) % 4;
+        else Dealer = _Dealer;
         ActivePlayer = Dealer;
         PrepareRound();
     }
-
-    public void SetWinds() //Смена ветров
+    /// <summary>
+    /// Расстановка ветров в зависимости от того кто дилер
+    /// </summary>
+    public void SetWinds() 
     {
         List<string> winds = new List<string>() { "East", "South", "West", "North" };
         if (ActivePlayer == -1)
@@ -181,25 +240,48 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void HandleTileClick(Tile clickedTile) //TODO отключение клика, если ждём вызов
+    public void HandleTileClick(Tile clickedTile) 
     {
         if (!Players[0].IsActive) return;
+
+        if (Players[0].Riichi) //если игрок объявил риичи то если есть тайлы со свойством то это тайл которым он объявляет риичи
+            if (clickedTile.IsDiscardable())
+                clickedTile.Properties.Add("Riichi");
+            else return;//если таких нет то он уже объявил риичи и ждет последнего тайла
+
+        CallsButtonsView.Clear();
         Players[0].DiscardTile(clickedTile);
         Players[0].PlayerDiscardView.Draw(Players[0].Discard);
-        PlayerHandView.Sort(Players[0].Hand);
-        PlayerHandView.Draw(Players[0].Hand);
-        // После сброса вызываем проверку вызовов
-        // (для реального игрока кнопки вызовов отобразятся, и ход не перейдёт дальше до принятия решения)
-        //EndTurn();
+        
+        
+        
+
     }
 
-    // Метод проверки возможности вызовов (пон/чи/кан) после сброса тайла
+    /// <summary>
+    /// Проверяет, может ли кто то из игроков сделать объявлеие на этот (сброшенный) тайл</summary>
+    /// <param name="tile"></param>
+    /// <param name="sender"></param>
     public void CheckForCalls(Tile tile, IPlayer sender)
     {
         // Проверяем для всех игроков возможность пон или кан
         foreach (var player in Players)
         {
             if (player==sender) continue;
+
+            if (player.CheckForRon(tile))
+            {
+                player.ron = (tile, sender);
+
+            }
+
+            if (player.Riichi)
+            {
+                player.ProceedCalls();
+            }
+            else continue;
+
+
             if (player.CheckForPon(tile))
             {
                 player.pon = (tile, sender);
@@ -214,7 +296,7 @@ public class GameManager : MonoBehaviour
         // Проверка на возможность чи только для игрока справа от скидывающего
         int index = Players.IndexOf(sender);
         index = (index + 1) % 4;
-        if (tile.Suit != "Dragon" && tile.Suit != "Wind")
+        if (tile.Suit != "Dragon" && tile.Suit != "Wind" && !Players[index].Riichi)
         {
             var chis = Players[index].CheckForChi(tile);
             if (chis != null && chis.Count > 0)
@@ -262,5 +344,68 @@ public class GameManager : MonoBehaviour
     {
         DorasShown++;
         DoraIndicatorView.Draw(DoraIndicator, DorasShown);
+    }
+
+    public void RoundWin(IPlayer player, int[] score_change)
+    {
+        for (int i = 0;i<Players.Count;i++)
+        {
+            Players[i].Score += score_change[i];
+        }
+        //TODO: вывести результаты раунда
+
+        int dealer = -1;
+        if (player.Wind == "East") dealer = player.index;
+
+        NextRound(dealer);
+    }
+
+    public List<Tile> GetDoras()
+    {
+        List<Tile> result=new List<Tile>();
+        for (int i = 0; i < DorasShown; i++)
+        {
+            result.Add(GetNext(DoraIndicator[i]));
+        }
+        return result;
+    }
+
+    public List<Tile> GetUraDoras()
+    {
+        List<Tile> result = new List<Tile>();
+        for (int i = 0; i < DorasShown; i++)
+        {
+            result.Add(GetNext(UraDoraIndicator[i]));
+        }
+        return result;
+    }
+
+    private Tile GetNext(Tile tile)
+    {
+        Dictionary<string, string> Dragons = new Dictionary<string, string>()
+        {
+            {"Green", "Red"},
+            {"Red", "White"},
+            {"White", "Green"}
+        };
+        Dictionary<string, string> Winds = new Dictionary<string, string>()
+        {
+            {"East", "South"},
+            {"South", "West"},
+            {"West", "North"},
+            {"North", "East"}
+        };
+
+        if ( tile.Suit=="Dragon")
+        {
+            return new Tile(tile.Suit, Dragons[tile.Rank]);
+        }
+        if (tile.Suit == "Wind")
+        {
+            return new Tile(tile.Suit, Winds[tile.Rank]);
+        }
+        if (tile.TryGetRankAsInt()<9)
+        return new Tile(tile.Suit, (int.Parse(tile.Rank) + 1).ToString());
+        else return new Tile(tile.Suit, 1.ToString());
     }
 }

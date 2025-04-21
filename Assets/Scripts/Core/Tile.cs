@@ -65,5 +65,20 @@ public class Tile
             return result;
         return -1;
     }
+
+    public void AddDiscardable()
+    {
+        Properties.Add("Discardable");
+    }
+
+    public bool IsDiscardable()
+    {
+        return Properties.Contains("Discardable");
+    }
+
+    public void RemoveDiscardable()
+    {
+        Properties.Remove("Discardable");
+    }
 }
 

@@ -130,8 +130,9 @@ public class CallsButtonsView : MonoBehaviour
 
     private void OnPassButtonClicked()
     {
-        player.CallPass();
         Clear();
+        player.CallPass();
+        
     }
 
     public void Clear()
@@ -146,5 +147,97 @@ public class CallsButtonsView : MonoBehaviour
         }
         buttonsCreated = 0;
         
+    }
+
+    public void CreateRiichiButton()
+    {
+        GameObject btn;
+        if (buttonsCreated < 3)
+        {
+            btn = Instantiate(buttonPrefab, ButtonsRow1);
+        }
+        else
+        {
+            btn = Instantiate(buttonPrefab, ButtonsRow2);
+        }
+
+        var btnText = btn.GetComponentInChildren<TextMeshProUGUI>();
+        if (btnText != null)
+            btnText.text = "Риичи";
+
+        Button buttonComponent = btn.GetComponent<Button>();
+        if (buttonComponent != null)
+        {
+            buttonComponent.onClick.AddListener(() => OnRiichiButtonClicked());
+        }
+        buttonsCreated++;
+    }
+
+    public void OnRiichiButtonClicked()
+    {
+        player.Riichi = true;
+        CreateCancelRiichiButton();
+    }
+
+    public void CreateCancelRiichiButton() // при создании кнопки отмены удаляем все остальные кнопки и оставляем только эту
+    {
+        Clear();
+
+        GameObject btn;
+        if (buttonsCreated < 3)
+        {
+            btn = Instantiate(buttonPrefab, ButtonsRow1);
+        }
+        else
+        {
+            btn = Instantiate(buttonPrefab, ButtonsRow2);
+        }
+
+        var btnText = btn.GetComponentInChildren<TextMeshProUGUI>();
+        if (btnText != null)
+            btnText.text = "Назад";
+
+        Button buttonComponent = btn.GetComponent<Button>();
+        if (buttonComponent != null)
+        {
+            buttonComponent.onClick.AddListener(() => OnCancelButtonClicked());
+        }
+        buttonsCreated++;
+
+    }
+    public void OnCancelButtonClicked() // при нажатии кнопки отммены удаляем ее и возвращаем все остальые кнопки
+    {
+        player.Riichi = false;
+        Clear();
+        player.ProceedCalls();
+    }
+
+    public void CreateTsumoButton()
+    {
+        GameObject btn;
+        if (buttonsCreated < 3)
+        {
+            btn = Instantiate(buttonPrefab, ButtonsRow1);
+        }
+        else
+        {
+            btn = Instantiate(buttonPrefab, ButtonsRow2);
+        }
+
+        var btnText = btn.GetComponentInChildren<TextMeshProUGUI>();
+        if (btnText != null)
+            btnText.text = "Цумо";
+
+        Button buttonComponent = btn.GetComponent<Button>();
+        if (buttonComponent != null)
+        {
+            buttonComponent.onClick.AddListener(() => OnTsumoButtonClicked());
+        }
+        buttonsCreated++;
+    }
+
+    public void OnTsumoButtonClicked()
+    {
+        player.CallTsumo();
     }
 }

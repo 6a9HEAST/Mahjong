@@ -12,6 +12,8 @@ public class HandAnalyzer
         Player = player;
     }
 
+    private HashSet<string> _processedStates;
+
     public void AnalyzeHand()
     {
         if (Player.index != 0) return;
@@ -24,31 +26,41 @@ public class HandAnalyzer
         if (Player.Calls != null)
             initialBlocks.AddRange(Player.Calls);
 
-        // Запускаем рекурсивный анализ.
-        RecursiveAnalyze(sortedHand, initialBlocks, initialBlocks.Count, 0);
+        _processedStates = new HashSet<string>();
+        // Запускаем рекурсивный анализ с кешем состояний
+        RecursiveAnalyze(sortedHand, initialBlocks, initialBlocks.Count, 0, _processedStates);
     }
 
-    private void RecursiveAnalyze(List<Tile> remaining, List<List<Tile>> blocks, int sets, int pairs)
+    private void RecursiveAnalyze(
+    List<Tile> remaining,
+    List<List<Tile>> blocks,
+    int sets,
+    int pairs,
+    HashSet<string> processedStates)
     {
+        string stateKey = GetStateKey(blocks, remaining);
+        if (processedStates.Contains(stateKey))
+            return;
+        processedStates.Add(stateKey);
         // Если получена рука с 4 завершёнными блоками или с 3 блоками и парой (состояние темпай)
         if (sets == 4 || (sets == 3 && pairs == 1))
         {
             if (YakuAnalyser == null)
-                YakuAnalyser = new YakuAnalyser();
+                YakuAnalyser = new YakuAnalyser(Player);
 
-            List<KeyValuePair<Tile, List<Tile>>> discardWaitOptions = ComputeDiscardWaits(remaining);
+            List<KeyValuePair<Tile, List<Tile>>> discard_Wait_Options = ComputeDiscardWaits(remaining);
             List<List<Tile>> completeBlocks = new List<List<Tile>>(blocks);
             // Добавляем неполный блок (оставшиеся плитки) в конец найденных блоков
             completeBlocks.Add(new List<Tile>(remaining));
 
-            foreach (var discardOption in discardWaitOptions.ToList())
+            foreach (var discardOption in discard_Wait_Options.ToList())
             {
                 if (discardOption.Value.Count == 0)
-                    discardWaitOptions.Remove(discardOption);  // Передаём весь KeyValuePair
+                    discard_Wait_Options.Remove(discardOption);  // Передаём весь KeyValuePair
             }
 
-            if (discardWaitOptions.Count != 0)
-                YakuAnalyser.AnalyzeYaku(discardWaitOptions, completeBlocks);
+            if (discard_Wait_Options.Count != 0)
+                YakuAnalyser.AnalyzeYaku(discard_Wait_Options, completeBlocks);
         }
 
         // РЕКУРСИЯ: поиск комбинации чи (последовательность из 3 тайлов)
@@ -85,7 +97,7 @@ public class HandAnalyzer
                 RemoveTile(newRemaining, nextNextTile);
                 List<List<Tile>> newBlocks = new List<List<Tile>>(blocks);
                 newBlocks.Add(chiBlock);
-                RecursiveAnalyze(newRemaining, newBlocks, sets + 1, pairs);
+                RecursiveAnalyze(newRemaining, newBlocks, sets + 1, pairs, processedStates);
             }
         }
 
@@ -117,7 +129,7 @@ public class HandAnalyzer
                 RemoveTile(newRemaining, remaining[indices[2]]);
                 List<List<Tile>> newBlocks = new List<List<Tile>>(blocks);
                 newBlocks.Add(ponBlock);
-                RecursiveAnalyze(newRemaining, newBlocks, sets + 1, pairs);
+                RecursiveAnalyze(newRemaining, newBlocks, sets + 1, pairs, processedStates);
             }
         }
 
@@ -136,8 +148,8 @@ public class HandAnalyzer
                     RemoveTile(newRemaining, remaining[j]);
                     List<List<Tile>> newBlocks = new List<List<Tile>>(blocks);
                     newBlocks.Add(pairBlock);
-                    RecursiveAnalyze(newRemaining, newBlocks, sets, pairs + 1);
-                }
+                        RecursiveAnalyze(newRemaining, newBlocks, sets, pairs+1, processedStates);
+                    }
             }
         }
     }
@@ -301,7 +313,6 @@ public class HandAnalyzer
     }
 
 
-
     /// <summary>
     /// Сортирует руку по мастям и рангу.
     /// </summary>
@@ -367,5 +378,24 @@ public class HandAnalyzer
         }
         else
             return RankOrder[tile1.Suit] > RankOrder[tile2.Suit];
+    }
+
+    private string GetStateKey(List<List<Tile>> blocks, List<Tile> remaining)
+    {
+        // Сортируем каждый блок и преобразуем в строку
+        var sortedBlocks = blocks.Select(block =>
+        {
+            var sortedBlock = new List<Tile>(block);
+            Sort(sortedBlock);
+            return string.Join(",", sortedBlock.Select(t => $"{t.Suit}-{t.Rank}"));
+        }).OrderBy(blockStr => blockStr).ToList(); // Сортируем блоки
+
+        // Сортируем оставшиеся тайлы
+        var sortedRemaining = new List<Tile>(remaining);
+        Sort(sortedRemaining);
+        string remainingStr = string.Join(",", sortedRemaining.Select(t => $"{t.Suit}-{t.Rank}"));
+
+        // Формируем ключ
+        return $"[{string.Join("|", sortedBlocks)}]|[{remainingStr}]";
     }
 }

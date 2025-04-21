@@ -1,8 +1,12 @@
+using static System.Math;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.XR;
+
+
 
 public interface IPlayer
 {
@@ -12,6 +16,7 @@ public interface IPlayer
     public List<Tile> Discard { get; set; }
     public bool IsOpen { get; set; }
     public bool IsActive { get; set; }
+    public bool Ippatsu { get; set; }
     public string Wind { get; set; }
     public GameManager GameManager { get; set; }
     public List<List<Tile>> Calls { get; set; }
@@ -19,18 +24,26 @@ public interface IPlayer
     public CallContainerView CallContainerView { get; set; }
     public int Score { get; set; }
     public Dictionary<string, int> TileCounts { get; set; }
-    // Для вызовов используем кортежи, содержащие информацию о тайле и игроке, с которым связан вызов
     public (Tile tile, IPlayer player) pon { get; set; }
     public (Tile tile, IPlayer player) kan { get; set; }
+    public (Tile tile, IPlayer player) ron { get; set; }
     public (List<List<Tile>>, IPlayer player) chi { get; set; }
     public HandAnalyzer HandAnalyzer { get; set; }
-
+    public List<DiscardWaitCost> DiscardWaitCosts { get; set; }
+    public List<WaitCost> WaitCosts { get; set; }
+    public bool TsumoAwailable { get; set; }
+    public bool PermanentFuriten { get; set; }
+    public bool TemporaryFuriten { get; set; }
+    public bool Riichi { get; set; }
     public abstract void AddTile(Tile tile, bool isRoundStart = false);
     public abstract void StartTurn();
     public abstract void CallChi(List<Tile> tiles);
     public abstract void CallPon();
     public abstract void CallKan();
     public abstract void CallPass();
+    public abstract void CallTsumo();
+    public abstract void TryAddDiscardWaitCost(DiscardWaitCost x);
+
 
     void DiscardTile(Tile tile);
     void ClearCalls();
@@ -42,13 +55,7 @@ public interface IPlayer
             if (TileCounts[tile.ToString()] >= 2) return true;
         return false;
     }
-
-    /// <summary>
-    /// Эта функция определяет может ли игрок объявить кан на посылаемый тайл.
-    /// </summary>
-    /// <returns>0 - нет кана. 1 - открытый кан. 2 - закрытый кан</returns>
     public abstract int CheckForKan(Tile tile, bool isTsumo = false);
-
     public List<List<Tile>> CheckForChi(Tile tile)
     {
         List<List<Tile>> possibleSequences = new List<List<Tile>>();
@@ -98,6 +105,7 @@ public interface IPlayer
         }
         return possibleSequences;
     }
+    public abstract bool CheckForRon(Tile tile);
 
     public void Clear()
     {
@@ -130,21 +138,35 @@ public class AiPlayer : IPlayer
 {
     public string Name { get; set; }
     public int index { get; set; }
-    public List<Tile> Hand { get; set; }
-    public List<Tile> Discard { get; set; }
-    public bool IsActive { get; set; }
-    public bool IsOpen { get; set; }
     public string Wind { get; set; }
+    public int Score { get; set; }
+    ////////////////////////////////////////////////////////
+    public bool IsOpen { get; set; }
+    public List<Tile> Hand { get; set; }
+    public List<List<Tile>> Calls { get; set; }
+    public List<Tile> Discard { get; set; }
+    public Dictionary<string, int> TileCounts { get; set; }
+    ////////////////////////////////////////////////////////      
     public GameManager GameManager { get; set; }
     public PlayerDiscardView PlayerDiscardView { get; set; }
-    public CallContainerView CallContainerView { get; set; }
-    public int Score { get; set; }
-    public Dictionary<string, int> TileCounts { get; set; }
+    public CallContainerView CallContainerView { get; set; }    
+    ////////////////////////////////////////////////////////
     public (Tile tile, IPlayer player) pon { get; set; }
     public (Tile tile, IPlayer player) kan { get; set; }
     public (List<List<Tile>>, IPlayer player) chi { get; set; }
-    public List<List<Tile>> Calls { get; set; }
+    public (Tile tile, IPlayer player) ron { get; set; }
+    ////////////////////////////////////////////////////////    
     public HandAnalyzer HandAnalyzer { get; set; }
+    public List<DiscardWaitCost> DiscardWaitCosts { get; set; }
+    public List<WaitCost> WaitCosts { get; set; }
+    ////////////////////////////////////////////////////////
+    public bool IsActive { get; set; }
+    public bool Riichi { get; set; }=false;
+    public bool Ippatsu { get; set; } = false;
+    public bool TsumoAwailable { get; set; }=false ;
+    public bool PermanentFuriten { get; set; } = false;
+    public bool TemporaryFuriten { get; set; } = false;
+
 
     public AiPlayer(string name, GameManager gameManager, PlayerDiscardView playerDiscardView,
         CallContainerView callContainerView,int index)
@@ -164,6 +186,8 @@ public class AiPlayer : IPlayer
         CallContainerView = callContainerView;
         IsOpen=false;
         HandAnalyzer = new HandAnalyzer(this);
+        DiscardWaitCosts = new List<DiscardWaitCost>();
+        WaitCosts = new List<WaitCost>();
     }
 
     public void AddTile(Tile tile,bool isRoundStart=false)
@@ -177,9 +201,25 @@ public class AiPlayer : IPlayer
         Discard.Add(tile);
         PlayerDiscardView.Draw(Discard);
       
-        GameManager.CheckForCalls(tile, this);
+        //GameManager.CheckForCalls(tile, this);
 
-        //GameManager.EndTurn();
+        GameManager.StartCoroutine(PauseAfterDiscardRoutine(tile));
+    }
+
+    private IEnumerator PauseAfterDiscardRoutine(Tile tile)
+    {
+        // Ставим игру на паузу
+        //GameManager.isPaused = true;
+        
+        // Ждем указанное время
+        yield return new WaitForSeconds(GameManager.WAIT_TIME);
+
+        // Снимаем паузу
+        //GameManager.isPaused = false;
+
+        
+        GameManager.CheckForCalls(tile, this);
+        
     }
 
     public void StartTurn()
@@ -208,7 +248,7 @@ public class AiPlayer : IPlayer
     public void CallPon() { }
     public void CallKan() { }
     public void CallPass() { }
-
+    public void CallTsumo() { }
     public int CheckForKan(Tile tile, bool isTsumo = false)
     {
         //0= нет кана
@@ -227,6 +267,14 @@ public class AiPlayer : IPlayer
         return 0;
 
     }
+    public bool CheckForRon(Tile tile)
+    {
+        return false;
+    }
+    public  void TryAddDiscardWaitCost(DiscardWaitCost x)
+    {
+
+    }
 }
 
 
@@ -236,21 +284,36 @@ public class RealPlayer : IPlayer
 {
     public string Name { get; set; }
     public int index { get; set; }
-    public List<Tile> Hand { get; set; }
-    public List<Tile> Discard { get; set; }
-    public bool IsActive { get; set; }
-    public bool IsOpen { get; set; }
     public string Wind { get; set; }
+    public int Score { get; set; }
+    ////////////////////////////////////////////////////////
+    public bool IsOpen { get; set; }
+    public List<Tile> Hand { get; set; }
+    public List<List<Tile>> Calls { get; set; }
+    public List<Tile> Discard { get; set; }
+    public Dictionary<string, int> TileCounts { get; set; }
+    ////////////////////////////////////////////////////////      
     public GameManager GameManager { get; set; }
     public PlayerDiscardView PlayerDiscardView { get; set; }
     public CallContainerView CallContainerView { get; set; }
-    public int Score { get; set; }
-    public Dictionary<string, int> TileCounts { get; set; }
+    ////////////////////////////////////////////////////////
     public (Tile tile, IPlayer player) pon { get; set; }
     public (Tile tile, IPlayer player) kan { get; set; }
     public (List<List<Tile>>, IPlayer player) chi { get; set; }
-    public List<List<Tile>> Calls { get; set; }
+    public (Tile tile, IPlayer player) ron { get; set; }
+    ////////////////////////////////////////////////////////    
     public HandAnalyzer HandAnalyzer { get; set; }
+    public List<DiscardWaitCost> DiscardWaitCosts { get; set; }
+    public List<WaitCost> WaitCosts { get; set; }
+    ////////////////////////////////////////////////////////
+    public bool IsActive { get; set; }
+    public bool Riichi { get; set; } = false;
+    public bool Ippatsu { get; set; } = false;
+    public bool TsumoAwailable { get; set; } = false;
+    public bool PermanentFuriten { get; set; } = false;
+    public bool TemporaryFuriten { get; set; } = false;
+
+
 
     public RealPlayer(string name, GameManager gameManager, PlayerDiscardView playerDiscardView,
         CallContainerView callContainerView,int index)
@@ -262,14 +325,19 @@ public class RealPlayer : IPlayer
         GameManager = gameManager;
         PlayerDiscardView = playerDiscardView;
         TileCounts = new Dictionary<string, int>();
+
         pon = (null, null);
         kan = (null, null);
         chi = (null, null);
+        ron = (null, null);
+
         Calls = new List<List<Tile>>();
         this.index = index;
         CallContainerView = callContainerView;
         IsOpen = false;
         HandAnalyzer = new HandAnalyzer(this);
+        DiscardWaitCosts = new List<DiscardWaitCost>();
+        WaitCosts = new List<WaitCost>();
     }
 
     public void AddTile(Tile tile,bool isRoundStart=false)
@@ -281,7 +349,7 @@ public class RealPlayer : IPlayer
             if (kanCheck==2||kanCheck==1)
                 { 
                 kan = (tile, this);
-                ProceedCalls();
+                //ProceedCalls();
                 }
             
         }
@@ -293,17 +361,33 @@ public class RealPlayer : IPlayer
 
     public void DiscardTile(Tile tile)
     {
+        UpgradeWaits(tile);   
+        
         Hand.Remove(tile);
+        GameManager.PlayerHandView.Sort(Hand);
+        GameManager.PlayerHandView.Draw(Hand);
+
         Discard.Add(tile);
+        PlayerDiscardView.Draw(Discard);
+
         TileCounts[tile.ToString()]--;
+
+        GameManager.StartCoroutine(PauseAfterDiscardRoutine(tile));
+
+        //GameManager.CheckForCalls(tile, this);
+
+    }
+
+    private IEnumerator PauseAfterDiscardRoutine(Tile tile)
+    {
+        yield return new WaitForSeconds(GameManager.WAIT_TIME);
         GameManager.CheckForCalls(tile, this);
-       // GameManager.CallsButtonsView.Clear();
     }
 
     public void StartTurn()
     {
-        // В этом примере реальный игрок не сбрасывает автоматически
-        // Логика для ожидания действий реализована через UI
+        CheckForTsumo();
+        ProceedCalls();
     }
 
     public void ClearCalls()
@@ -311,29 +395,46 @@ public class RealPlayer : IPlayer
         pon = (null, null);
         kan = (null, null);
         chi = (null, null);
+        ron = (null, null);
+        TsumoAwailable = false;
     }
 
+    /// <summary>
+    /// Добавляет кнопки для возможных вызовов и кнопку для пропуска
+    /// </summary>
     public void ProceedCalls()
     {
+        bool buttoncreated = false;
         // При наличии вызовов отображаем соответствующие кнопки на UI.
+        if (!IsOpen && DiscardWaitCosts.Count > 0 && GameManager.Wall.Count>4 &&!Riichi&&IsActive)
+            {
+            GameManager.CallsButtonsView.CreateRiichiButton();
+            buttoncreated = true;
+            }
+
+        if (TsumoAwailable)
+            {
+            GameManager.CallsButtonsView.CreateTsumoButton();
+            buttoncreated = true;
+            }
+
         if (pon != (null, null))
             { 
             GameManager.CallsButtonsView.CreatePonButton();
-            //Debug.Log("Есть пон на " + pon.tile.ToString());
+            buttoncreated = true;
         }
         if (kan != (null, null))
-            { GameManager.CallsButtonsView.CreateKanButton();
-            //Debug.Log("Есть Кан на " + kan.tile.ToString());
-        }
+            { 
+            GameManager.CallsButtonsView.CreateKanButton();
+            buttoncreated = true;
+            }
         if (chi != (null, null))
-            { GameManager.CallsButtonsView.CreateChiButton();
-            //Debug.Log("Есть чи");
-        }
-        GameManager.CallsButtonsView.CreatePassButton();
-        // Также можно добавить кнопку "Пас", чтобы игрок мог отказаться от вызова.
+            { 
+            GameManager.CallsButtonsView.CreateChiButton();
+            buttoncreated = true;
+            }
+         if (buttoncreated)GameManager.CallsButtonsView.CreatePassButton();
     }
-
-    // Методы, вызываемые из UI при нажатии на кнопки:
 
     public void CallPon()
     {
@@ -421,12 +522,17 @@ public class RealPlayer : IPlayer
             }
             Calls.Add(tiles);
             CallContainerView.Draw(Calls);
+
             AddTile(GameManager.KanTiles[0]);
             GameManager.KanTiles.RemoveAt(0);
             GameManager.RevealDora();
             GameManager.PlayerHandView.Draw(Hand);
+
             ClearCalls();
             GameManager.CallsButtonsView.Clear();
+
+            CheckForTsumo();
+
             return;
 
 
@@ -508,26 +614,91 @@ public class RealPlayer : IPlayer
         ClearCalls();
         GameManager.EndTurn(0);
         GameManager.CallsButtonsView.Clear();
-
-        //Debug.Log(Name + " объявляет ЧИ");
-        //// Реализуйте оформление чи (при необходимости с выбором варианта)
-        //GameManager.OnCallDecisionMade(this);
-        //ClearCalls();
-        //GameManager.CallsButtonsView.Clear();
     }
 
-    // Этот метод можно вызвать при отказе от любого вызова (например, кнопка "Пас")
     public void CallPass()
     {
+        if (TsumoAwailable) TsumoAwailable = false;
         ClearCalls();
+        if (Riichi)
+            GameManager.StartCoroutine(PauseAfter_NoTsumoInRiichi_Routine());
+        else
+        if (!IsActive)
+         GameManager.EndTurn();
 
-        GameManager.EndTurn();
-        //Debug.Log(Name + " отказывается от вызова");
-        //GameManager.OnCallDecisionMade(this);
      
-        GameManager.CallsButtonsView.Clear();
+        
     }
 
+    public void CallRiichi()
+    {
+
+    }
+
+    public void CallTsumo() 
+    {
+        Debug.Log("Tsumo");
+        var wait_cost = WaitCosts.FirstOrDefault(t => t.Wait.Equals(Hand[^1]));//находим стоимость руки с цумо тайлом
+
+        var fu = wait_cost.Costs.FirstOrDefault(a => a.Yaku == "Fu");//находим количество минипоинтов
+
+        fu.Cost += 2; //надбавка за цумо
+
+        fu.Cost += 20; //минимальная базовая стоимость
+
+        if (wait_cost.Costs.Any(z => z.Yaku == "Семь пар"))
+            fu.Cost = 25;//фиксированная стоимость 7 пар
+        else
+        fu.Cost= (int)Ceiling(fu.Cost / 10.0) * 10;//округление очков фу в большую сторону
+
+        
+
+        if (Riichi)
+        {
+            wait_cost.Costs.Insert(0, ("Риичи", 1));
+            if (Ippatsu) wait_cost.Costs.Insert(0, ("Иппацу", 1));
+        }
+        if (!IsOpen) wait_cost.Costs.Insert(0, ("Цумо", 1));
+
+        var round_end = new RoundEndCalculator();
+        round_end.CountTsumoPoints(this, wait_cost.Costs);
+    }
+
+    public void CallRon()
+    {
+        Debug.Log("Ron");
+        var wait_cost = WaitCosts.FirstOrDefault(t => t.Wait.Equals(ron.tile));
+
+        var fu = wait_cost.Costs.FirstOrDefault(a => a.Yaku == "Fu");//находим количество минипоинтов
+        
+        fu.Cost += 20; //минимальная базовая стоимость
+        if (IsOpen) fu.Cost += 10; //надбавка за рон с закрытой рукой
+
+        if (wait_cost.Costs.Any(z => z.Yaku == "Семь пар"))
+            fu.Cost = 25;//фиксированная стоимость 7 пар
+        else
+            fu.Cost = (int)Ceiling(fu.Cost / 10.0) * 10;//округление очков фу в большую сторону
+
+        if (Riichi)
+        {
+            wait_cost.Costs.Insert(0, ("Риичи", 1));
+            if (Ippatsu) wait_cost.Costs.Insert(0, ("Иппацу", 1));
+        }
+
+        Hand.Add(ron.tile);
+
+        var round_end=new RoundEndCalculator();
+        round_end.CountRonPoints(this, ron.player, wait_cost.Costs);
+    }
+
+    /// <summary>
+    /// 0=нет кана,
+    /// 1=открытый кан,
+    /// 2=закрытый кан
+    /// </summary>
+    /// <param name="tile"></param>
+    /// <param name="isTsumo"></param>
+    /// <returns></returns>
     public int CheckForKan(Tile tile, bool isTsumo = false)
     {
         //0= нет кана
@@ -545,6 +716,91 @@ public class RealPlayer : IPlayer
             }
         return 0;
 
+    }
+
+    public void CheckForTsumo()
+    {
+        foreach (var waitcost in WaitCosts)
+        {   // Если есть ожидание на взятый тайл 
+            if (waitcost.Wait.Equals(Hand[^1]))
+                //Если у руки есть стоимость ИЛИ если риичи ИЛИ если рука закрыта - можно объявить цумо
+                if (waitcost.Costs.Count > 0||Riichi||!IsOpen) 
+                    {
+                    TsumoAwailable = true;
+                    return;
+                    }
+        }
+        if (Riichi && kan==(null,null)) GameManager.StartCoroutine(PauseAfter_NoTsumoInRiichi_Routine());
+    }
+
+    private IEnumerator PauseAfter_NoTsumoInRiichi_Routine()
+    {
+        yield return new WaitForSeconds(GameManager.WAIT_TIME);
+        DiscardTile(Hand[^1]);
+    }
+
+    public void TryAddDiscardWaitCost(DiscardWaitCost x)
+    {
+        // Ищем существующий элемент с таким же Discard
+        var existing = DiscardWaitCosts.FirstOrDefault(c => c.Discard.Equals(x.Discard));
+
+        if (existing != null)
+        {
+            // Если элемент существует, добавляем новые WaitCost из x, которых ещё нет в списке
+            foreach (var waitCost in x.WaitsCosts)
+            {
+                // Проверяем, есть ли WaitCost с таким же Wait (сравниваем по значению)
+                if (!existing.WaitsCosts.Any(wc => wc.Wait.Equals(waitCost.Wait)))
+                {
+                    existing.WaitsCosts.Add(waitCost);
+                }
+            }
+        }
+        else
+        {
+            // Если элемент не найден, добавляем новый DiscardWaitCost и помечаем тайл как сбрасываемый
+            DiscardWaitCosts.Add(x);
+            foreach (var tile in Hand)
+            {
+                if (tile.Equals(x.Discard) && !tile.IsDiscardable())
+                {
+                    tile.AddDiscardable();
+                }
+            }
+        }
+    }
+    /// <summary>
+    /// Если сброшенный тайл есть в списке дискард-ожидания, то обновляем ожидания игрока  на тайлы
+    /// </summary>
+    public void UpgradeWaits(Tile tile)
+    {
+        
+        WaitCosts.Clear();
+        ClearDiscardableMarks();
+        if (DiscardWaitCosts.Any(t => t.Discard.Equals(tile)))
+        {
+            WaitCosts = DiscardWaitCosts.Where(c => c.Discard.Equals(tile)).Select(c => c.WaitsCosts).FirstOrDefault();            
+        }
+        DiscardWaitCosts.Clear();
+    }
+
+    /// <summary>
+    /// Убирает у всех тайлов пометку что их можно сбросить чтобы стать темпай
+    /// </summary>
+    public void ClearDiscardableMarks()
+    {
+        foreach (var t in Hand)
+            t.RemoveDiscardable();
+    }
+
+    public bool CheckForRon(Tile tile)
+    {
+        foreach (var waitcost in WaitCosts)
+        {
+            if (waitcost.Wait == tile)
+                return true;
+        }
+        return false;
     }
 }
 

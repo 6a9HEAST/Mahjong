@@ -6,6 +6,7 @@ using UnityEngine.UI;
 public class TileView : MonoBehaviour
 {
     public Image TileImage; // Укажите ссылку на компонент Image
+    public Image DiscardArrow;
     private Tile tileData;
     public UnityEvent<Tile> OnTileClicked;
 
@@ -31,6 +32,14 @@ public class TileView : MonoBehaviour
             TileImage.sprite = TileSpriteManager.GetSprite(tileData);
             TileImage.preserveAspect = true; // Сохраняет пропорции
         }
+
+        if (DiscardArrow != null)
+            if (tileData.IsDiscardable())    
+            {
+                DiscardArrow.sprite = TileSpriteManager.GetDiscardArrow();
+                DiscardArrow.preserveAspect = true; // Сохраняет пропорции
+            }
+            else DiscardArrow.color = new Color(0, 0, 0, 0);
     }
 
     void OnMouseDown()

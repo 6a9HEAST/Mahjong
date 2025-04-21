@@ -14,7 +14,7 @@ public static class TileFactory
                 int k = 4;
                 if (i==5) //Добавление красных пятерок вместо одной из 4 пятерок
                 { 
-                    wall.Add(new Tile(suit, "Red" + i.ToString()));
+                    wall.Add(new Tile(suit,i.ToString(),false,"Red"));
                     k--;
                 }
 

@@ -8,13 +8,16 @@ public static class TileSpriteManager
     // Инициализация спрайтов
     public static void Initialize()
     {
-        //Debug.Log("Загрузка текстур");
-        // Загрузите все спрайты в словарь
+
         foreach (var sprite in Resources.LoadAll<Sprite>("Tiles"))
         {
-            //Debug.Log($"Загружен спрайт: {sprite.name}");
+
             spriteDictionary[sprite.name] = sprite;
         }
+
+        var discardArrow = Resources.Load<Sprite>("DiscardArrow50x50"); // Без расширения [[5]]
+
+        spriteDictionary[discardArrow.name] = discardArrow;
     }
 
     public static Sprite GetSprite(Tile tile)
@@ -25,6 +28,16 @@ public static class TileSpriteManager
             return sprite;
         }
         Debug.LogWarning($"Sprite for tile {tile.ToString()} not found!");
+        return null;
+    }
+
+    public static Sprite GetDiscardArrow()
+    {
+        if (spriteDictionary.TryGetValue("DiscardArrow50x50", out var sprite))
+        {
+            return sprite;
+        }
+        Debug.LogWarning($"Sprite for DiscardArrow50x50 not found!");
         return null;
     }
 }

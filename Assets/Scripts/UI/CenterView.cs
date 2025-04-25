@@ -14,8 +14,12 @@ public class CenterView:MonoBehaviour
     public Transform P2_Wind;
     public Transform P3_Wind;
     public Transform P4_Wind;
+
+    public List<Transform> BetIndicators;
+
     public Transform TilesRemaining;
     public Transform RoundWind;
+    public Transform BetDisplay;
     public UnityEvent OnCenterClicked;
     int[] scores = new int[4];
     private void Awake()
@@ -124,6 +128,24 @@ public class CenterView:MonoBehaviour
         P4_Score.GetComponent<TextMeshProUGUI>().text = delta3.ToString();
         if (delta3 <= 0) P4_Score.GetComponent<TextMeshProUGUI>().color = Color.red;
         else P4_Score.GetComponent<TextMeshProUGUI>().color = Color.blue;
+    }
+
+    public void UpdateBet(int bet)
+    {
+        var number = BetDisplay.transform.Find("Number").GetComponent<TextMeshProUGUI>();
+        number.text = bet.ToString()+" x";
+    }
+
+    public void UpdatePlayerBetView(List<IPlayer> players)
+    {
+        foreach (var player in players) 
+        {
+            if (player.Riichi)
+            {
+                BetIndicators[player.index].gameObject.SetActive(true);
+            }
+            else BetIndicators[player.index].gameObject.SetActive(false);
+        }
     }
 }
 

@@ -29,13 +29,18 @@ public class RoundEndCalculator
         
         yakus.Remove(fu);
 
-        int han= yakus.Sum(a => a.Cost);
+        var doras = CalculateDoras(winner);
+        if (doras.Cost!=0)
+            yakus.Add(doras);
 
-        han += CalculateDoras(winner);
         if (winner.Riichi)
-            han+= CalculateUraDoras(winner);
-        han+=CalculateRedFives(winner);
+            yakus.Add(CalculateUraDoras(winner));
 
+        var redFives = CalculateRedFives(winner);
+        if (redFives.Cost != 0)
+            yakus.Add(redFives);
+
+        int han = yakus.Sum(a => a.Cost);
         var points = CalculateTsumoPoints(han, fu.Cost);
 
         int[] pts_changes = new int[4] {0,0,0,0};
@@ -63,7 +68,7 @@ public class RoundEndCalculator
         }
         pts_changes[winner.index] += player_gain;
 
-        winner.GameManager.RoundWin(winner, pts_changes);
+        winner.GameManager.RoundWin(winner, pts_changes,han,yakus);
     }
 
     public void CountRonPoints(IPlayer winner, IPlayer deal_in, List<(string Yaku, int Cost)> yakus)
@@ -72,12 +77,18 @@ public class RoundEndCalculator
 
         yakus.Remove(fu);
 
-        int han = yakus.Sum(a => a.Cost);
+        var doras = CalculateDoras(winner);
+        if (doras.Cost!=0)
+            yakus.Add(doras);
 
-        han += CalculateDoras(winner);
         if (winner.Riichi)
-            han += CalculateUraDoras(winner);
-        han += CalculateRedFives(winner);
+            yakus.Add(CalculateUraDoras(winner));
+
+        var redFives = CalculateRedFives(winner);
+        if (redFives.Cost != 0)
+            yakus.Add(redFives);
+
+        int han = yakus.Sum(a => a.Cost);
 
         var points = CalculateRonPoints(han, fu.Cost);
 
@@ -90,11 +101,13 @@ public class RoundEndCalculator
         pts_changes[winner.index] += final_points;
         pts_changes[deal_in.index] -= final_points;
 
-        winner.GameManager.RoundWin(winner, pts_changes);
+        winner.GameManager.RoundWin(winner, pts_changes,han,yakus);
     }
 
     private (int dealer,int non_dealer) CalculateTsumoPoints(int han, int fu)
     {
+        if (han >= 13) return (limits[13] * 2, limits[13]);
+        else
         if (han >= 5) return (limits[han]*2, limits[han]); //если хан 5 и выше, то фиксированная стоимость 
                                                            //(с диллера/для диллера стоимость_лимита x 2,
                                                            //с недиллера стоимость_лимита)
@@ -107,57 +120,60 @@ public class RoundEndCalculator
 
     private int CalculateRonPoints(int han, int fu)
     {
-        if (han >= 5) return limits[han] * 4; //если хан 5 и выше, то фиксированная стоимость
+        if (han >= 13) return limits[13];
+        else
+        if (han >= 5) return limits[han]; //если хан 5 и выше, то фиксированная стоимость
                                               //(стоимость лимита*4)
         else
             return (int)(fu * Pow(2, 2 + han));
     }
 
-    private int CalculateDoras(IPlayer player)
+    private (string Yaku,int Cost) CalculateDoras(IPlayer player)
     {
         List<Tile> doras = player.GameManager.GetDoras();
         
 
-        int han = 0;
+        int count = 0;
 
         foreach (var  tile in player.Hand)
         {
             foreach (var dora in doras)
             {
                 if (dora.Equals(tile))
-                    han++;
+                    count++;
             }           
         }
-        return han;
+        
+        return ("Дора",count);
 
     }
 
-    private int CalculateUraDoras(IPlayer player)
+    private (string Yaku, int Cost) CalculateUraDoras(IPlayer player)
     {
         List<Tile> ura_doras = player.GameManager.GetUraDoras();
-        int han = 0;
+        int count = 0;
 
         foreach (var tile in player.Hand)
         {
             foreach (var ura_dora in ura_doras)
             {
                 if (ura_dora.Equals(tile))
-                    han++;
+                    count++;
             }
         }
-        return han;
+        return ("Скрытая Дора", count);
     }
 
-    private int CalculateRedFives(IPlayer player)
+    private (string Yaku, int Cost) CalculateRedFives(IPlayer player)
     {
-        int han = 0;
+        int count = 0;
 
         foreach (var tile in player.Hand)
         {
             if (tile.Properties.Contains("Red"))
-                han++;
+                count++;
         }
-        return han;
+        return ("Ака дора", count);
     }
 
 

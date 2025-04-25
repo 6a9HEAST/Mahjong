@@ -39,7 +39,7 @@ public class CallsButtonsView : MonoBehaviour
 
     private void OnChiButtonClicked()
     {
-        player.CallChi(player.chi.Item1[0]);
+        player.CallChi();
         Clear();
     }
 
@@ -131,7 +131,7 @@ public class CallsButtonsView : MonoBehaviour
     private void OnPassButtonClicked()
     {
         Clear();
-        player.CallPass();
+        player.GameManager.StartCoroutine(player.ExecutePass());
         
     }
 
@@ -238,6 +238,34 @@ public class CallsButtonsView : MonoBehaviour
 
     public void OnTsumoButtonClicked()
     {
-        player.CallTsumo();
+        player.ExecuteTsumo();
+    }
+
+    public void CreateRonButton()
+    {
+        GameObject btn;
+        if (buttonsCreated < 3)
+        {
+            btn = Instantiate(buttonPrefab, ButtonsRow1);
+        }
+        else
+        {
+            btn = Instantiate(buttonPrefab, ButtonsRow2);
+        }
+
+        var btnText = btn.GetComponentInChildren<TextMeshProUGUI>();
+        if (btnText != null)
+            btnText.text = "Рон";
+
+        Button buttonComponent = btn.GetComponent<Button>();
+        if (buttonComponent != null)
+        {
+            buttonComponent.onClick.AddListener(() => OnRonButtonClicked());
+        }
+        buttonsCreated++;
+    }
+    public void OnRonButtonClicked()
+    {
+    player.CallRon();
     }
 }

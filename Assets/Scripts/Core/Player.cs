@@ -37,15 +37,22 @@ public interface IPlayer
     public bool Riichi { get; set; }
     public abstract void AddTile(Tile tile, bool isRoundStart = false);
     public abstract void StartTurn();
-    public abstract void CallChi(List<Tile> tiles);
-    public abstract void CallPon();
-    public abstract void CallKan();
-    public abstract void CallPass();
-    public abstract void CallTsumo();
+    public abstract void ExecuteChi(List<Tile> tiles);
+    public abstract void ExecutePon();
+    public abstract void ExecuteKan();
+    public abstract IEnumerator ExecutePass();
+    public abstract void ExecuteTsumo();
+    public abstract void ExecuteRon();
     public abstract void TryAddDiscardWaitCost(DiscardWaitCost x);
+    public abstract void UpgradeWaits(Tile tile);
+    public abstract bool HasWaitOn(Tile tile);
 
+    //public abstract void CallPon();
+    //public abstract void CallKan();
+    //public abstract void CallRon();
+    //public abstract void CallChi();
 
-    void DiscardTile(Tile tile);
+    IEnumerator DiscardTile(Tile tile);
     void ClearCalls();
 
     // Проверка возможности вызовов
@@ -121,7 +128,7 @@ public interface IPlayer
     // Если какой-либо вызов объявлен, возвращается true
     public bool HasCalls()
     {
-        if (pon != (null, null) || kan != (null, null) || chi != (null, null))
+        if (pon != (null, null) || kan != (null, null) || chi != (null, null)||ron!=(null,null))
             return true;
         else
             return false;
@@ -129,6 +136,38 @@ public interface IPlayer
 
     // Метод, который должен обработать вызовы (реализуется по-разному для ИИ и реального игрока)
     public abstract void ProceedCalls();
+
+    public void CallPon()
+    {
+        var copy_pon = pon;
+        ClearCalls();
+        pon = copy_pon;
+        GameManager.Executecalls();
+    }
+
+    public void CallChi()
+    {
+        var copy_chi = chi;
+        ClearCalls();
+        chi = copy_chi;
+        GameManager.Executecalls();
+    }
+
+    public void CallKan()
+    {
+        var copy_kan = kan;
+        ClearCalls();
+        kan = copy_kan;
+        GameManager.Executecalls();
+    }
+
+    public void CallRon()
+    {
+        var copy_ron = ron;
+        ClearCalls();
+        ron = copy_ron;
+        GameManager.Executecalls();
+    }
 }
 
 
@@ -195,38 +234,30 @@ public class AiPlayer : IPlayer
         Hand.Add(tile);
     }
 
-    public void DiscardTile(Tile tile)
+    public IEnumerator DiscardTile(Tile tile)
     {
         Hand.Remove(tile);
         Discard.Add(tile);
         PlayerDiscardView.Draw(Discard);
-      
+
         //GameManager.CheckForCalls(tile, this);
-
-        GameManager.StartCoroutine(PauseAfterDiscardRoutine(tile));
-    }
-
-    private IEnumerator PauseAfterDiscardRoutine(Tile tile)
-    {
-        // Ставим игру на паузу
-        //GameManager.isPaused = true;
-        
-        // Ждем указанное время
-        yield return new WaitForSeconds(GameManager.WAIT_TIME);
-
-        // Снимаем паузу
-        //GameManager.isPaused = false;
-
-        
+        yield return GameManager.WAIT_TIME;
         GameManager.CheckForCalls(tile, this);
-        
     }
+
 
     public void StartTurn()
     {
-        
-        int index = Random.Range(0, Hand.Count);
-        DiscardTile(Hand[index]);
+        if (GameManager.TEST_TILES2.Count>0&&index==3&&GameManager.TEST_HAND)
+        {
+            GameManager.StartCoroutine(DiscardTile(GameManager.TEST_TILES2[0]));
+            GameManager.TEST_TILES2.RemoveAt(0);
+        }
+        else
+        {
+            int index = Random.Range(0, Hand.Count);
+            GameManager.StartCoroutine(DiscardTile(Hand[index]));
+        }
     }
 
     public void ClearCalls()
@@ -236,19 +267,35 @@ public class AiPlayer : IPlayer
         chi = (null, null);
     }
 
+
     public void ProceedCalls()
     {
-        // ИИ автоматически отказывает от вызова (можно добавить дополнительную логику)
-        //Debug.Log(Name + " автоматически отказывается от вызова");
-        //GameManager.OnCallDecisionMade(this);
-        //ClearCalls();
+        GameManager.StartCoroutine(ExecutePass());
     }
 
-    public void CallChi(List<Tile> t) { }
-    public void CallPon() { }
-    public void CallKan() { }
-    public void CallPass() { }
-    public void CallTsumo() { }
+    public void ExecuteChi(List<Tile> t) { }
+    public void ExecutePon() { }
+    public void ExecuteKan() { }
+    public IEnumerator ExecutePass()
+    {
+        if (TsumoAwailable) TsumoAwailable = false;
+        if (ron != (null, null))
+            if (Riichi) PermanentFuriten = true;
+            else TemporaryFuriten = true;
+
+        ClearCalls();
+        if (Riichi)
+        {
+            yield return GameManager.WAIT_TIME;
+            GameManager.EndTurn();
+        }
+        else
+        if (!IsActive)
+            GameManager.EndTurn();
+    }
+    public void ExecuteTsumo() { }
+    public void ExecuteRon() { }
+    public void UpgradeWaits(Tile tile) { }
     public int CheckForKan(Tile tile, bool isTsumo = false)
     {
         //0= нет кана
@@ -275,6 +322,19 @@ public class AiPlayer : IPlayer
     {
 
     }
+
+    public  bool HasWaitOn(Tile tile)
+    {
+        if (tile != null)
+            if (WaitCosts.Any(t => t.Wait.Equals(tile)))
+                return true;
+        return false;
+    }
+
+    //public void CallPon() { }
+    //public void CallKan() { }
+    //public void CallChi() { }
+    //public void CallRon() { }
 }
 
 
@@ -312,6 +372,7 @@ public class RealPlayer : IPlayer
     public bool TsumoAwailable { get; set; } = false;
     public bool PermanentFuriten { get; set; } = false;
     public bool TemporaryFuriten { get; set; } = false;
+    public bool DiscardFuriten { get; set; } = false;
 
 
 
@@ -359,10 +420,12 @@ public class RealPlayer : IPlayer
             TileCounts[tile.ToString()] = 1;
     }
 
-    public void DiscardTile(Tile tile)
+    public IEnumerator DiscardTile(Tile tile)
     {
-        UpgradeWaits(tile);   
-        
+        if (!Riichi)
+            UpgradeWaits(tile);
+        TemporaryFuriten = false;
+        Ippatsu = false;
         Hand.Remove(tile);
         GameManager.PlayerHandView.Sort(Hand);
         GameManager.PlayerHandView.Draw(Hand);
@@ -372,21 +435,17 @@ public class RealPlayer : IPlayer
 
         TileCounts[tile.ToString()]--;
 
-        GameManager.StartCoroutine(PauseAfterDiscardRoutine(tile));
+        yield return GameManager.WAIT_TIME;
+        GameManager.CheckForCalls(tile, this);
 
         //GameManager.CheckForCalls(tile, this);
 
     }
 
-    private IEnumerator PauseAfterDiscardRoutine(Tile tile)
-    {
-        yield return new WaitForSeconds(GameManager.WAIT_TIME);
-        GameManager.CheckForCalls(tile, this);
-    }
 
     public void StartTurn()
     {
-        CheckForTsumo();
+        GameManager.StartCoroutine(CheckForTsumo());
         ProceedCalls();
     }
 
@@ -433,10 +492,17 @@ public class RealPlayer : IPlayer
             GameManager.CallsButtonsView.CreateChiButton();
             buttoncreated = true;
             }
-         if (buttoncreated)GameManager.CallsButtonsView.CreatePassButton();
+        if ( ron!= (null, null))
+        {
+            GameManager.CallsButtonsView.CreateRonButton();
+            buttoncreated = true;
+        }
+        if (buttoncreated)GameManager.CallsButtonsView.CreatePassButton();
     }
 
-    public void CallPon()
+    
+
+    public void ExecutePon()
     {
         IsOpen = true;
         //Удаление тайла из дискарда другого игрока и двух из руки
@@ -445,8 +511,8 @@ public class RealPlayer : IPlayer
         for (int i = 0; i < 2; i++)
         {
             Hand.Remove(pon.tile);
-            //TileCounts[pon.tile.ToString()]--; не уменьшается счетчик чтобы можно было объявить кан по цумо
-        }
+                    }
+        TileCounts[pon.tile.ToString()] -= 3;
         //Создание новой тройки открытых тайлов
         Calls.Add(new List<Tile>());
 
@@ -484,7 +550,7 @@ public class RealPlayer : IPlayer
         //GameManager.CallsButtonsView.Clear();
     }
 
-    public void CallKan()
+    public void ExecuteKan()
     {
         if (kan.player == this) //если тайл для кана - цумо тайл
         {
@@ -501,6 +567,7 @@ public class RealPlayer : IPlayer
                     else if (call[2].Properties.Contains("Called"))
                         call.Insert(2, tile);
                     Hand.Remove(kan.tile);
+                    TileCounts[kan.tile.ToString()]--;
                     CallContainerView.Draw(Calls);
                     AddTile(GameManager.KanTiles[0]);
                     GameManager.KanTiles.RemoveAt(0);
@@ -522,7 +589,7 @@ public class RealPlayer : IPlayer
             }
             Calls.Add(tiles);
             CallContainerView.Draw(Calls);
-
+            TileCounts[kan.tile.ToString()] -= 4;
             AddTile(GameManager.KanTiles[0]);
             GameManager.KanTiles.RemoveAt(0);
             GameManager.RevealDora();
@@ -531,7 +598,7 @@ public class RealPlayer : IPlayer
             ClearCalls();
             GameManager.CallsButtonsView.Clear();
 
-            CheckForTsumo();
+            GameManager.StartCoroutine(CheckForTsumo());
 
             return;
 
@@ -544,9 +611,9 @@ public class RealPlayer : IPlayer
         for (int i = 0; i < 3; i++)
         {
             Hand.Remove(kan.tile);
-            TileCounts[kan.tile.ToString()]--;
+            
         }
-
+        TileCounts[kan.tile.ToString()] -= 3;
         List<Tile> tiles_ = new List<Tile>();
         for (int i = 0; i < 4; i++)
         {
@@ -591,7 +658,7 @@ public class RealPlayer : IPlayer
         GameManager.CallsButtonsView.Clear();
     }
 
-    public void CallChi(List<Tile> tiles)
+    public void ExecuteChi(List<Tile> tiles)
     {
         IsOpen=true;
         chi.player.Discard.Remove(tiles[0]);
@@ -616,18 +683,22 @@ public class RealPlayer : IPlayer
         GameManager.CallsButtonsView.Clear();
     }
 
-    public void CallPass()
+    public IEnumerator ExecutePass()
     {
         if (TsumoAwailable) TsumoAwailable = false;
-        ClearCalls();
+        if (ron != (null, null))
+            if (Riichi) PermanentFuriten = true;
+            else TemporaryFuriten = true;
+
+            ClearCalls();
         if (Riichi)
-            GameManager.StartCoroutine(PauseAfter_NoTsumoInRiichi_Routine());
+        {
+            yield return GameManager.WAIT_TIME;
+            GameManager.EndTurn();
+        }
         else
         if (!IsActive)
-         GameManager.EndTurn();
-
-     
-        
+         GameManager.EndTurn();        
     }
 
     public void CallRiichi()
@@ -635,9 +706,8 @@ public class RealPlayer : IPlayer
 
     }
 
-    public void CallTsumo() 
+    public void ExecuteTsumo() 
     {
-        Debug.Log("Tsumo");
         var wait_cost = WaitCosts.FirstOrDefault(t => t.Wait.Equals(Hand[^1]));//находим стоимость руки с цумо тайлом
 
         var fu = wait_cost.Costs.FirstOrDefault(a => a.Yaku == "Fu");//находим количество минипоинтов
@@ -651,20 +721,21 @@ public class RealPlayer : IPlayer
         else
         fu.Cost= (int)Ceiling(fu.Cost / 10.0) * 10;//округление очков фу в большую сторону
 
-        
+
+        if (!IsOpen) wait_cost.Costs.Insert(0, ("Цумо", 1));
 
         if (Riichi)
         {
-            wait_cost.Costs.Insert(0, ("Риичи", 1));
             if (Ippatsu) wait_cost.Costs.Insert(0, ("Иппацу", 1));
+            wait_cost.Costs.Insert(0, ("Риичи", 1));
         }
-        if (!IsOpen) wait_cost.Costs.Insert(0, ("Цумо", 1));
+        
 
         var round_end = new RoundEndCalculator();
         round_end.CountTsumoPoints(this, wait_cost.Costs);
     }
 
-    public void CallRon()
+    public void ExecuteRon()
     {
         Debug.Log("Ron");
         var wait_cost = WaitCosts.FirstOrDefault(t => t.Wait.Equals(ron.tile));
@@ -681,8 +752,9 @@ public class RealPlayer : IPlayer
 
         if (Riichi)
         {
-            wait_cost.Costs.Insert(0, ("Риичи", 1));
             if (Ippatsu) wait_cost.Costs.Insert(0, ("Иппацу", 1));
+            wait_cost.Costs.Insert(0, ("Риичи", 1));
+            
         }
 
         Hand.Add(ron.tile);
@@ -709,17 +781,18 @@ public class RealPlayer : IPlayer
         if (TileCounts.ContainsKey(tile.ToString()))
             if (TileCounts[tile.ToString()] >= 3)
             {
-                foreach (var call in Calls)
-                    if (call.Contains(tile) && isTsumo) return 1;
                 if (isTsumo) return 2;
                 else return 1;
             }
+        foreach (var call in Calls)
+            if (isPon(call) && isTsumo) return 1;
         return 0;
 
     }
 
-    public void CheckForTsumo()
+    public IEnumerator CheckForTsumo()
     {
+       
         foreach (var waitcost in WaitCosts)
         {   // Если есть ожидание на взятый тайл 
             if (waitcost.Wait.Equals(Hand[^1]))
@@ -727,17 +800,19 @@ public class RealPlayer : IPlayer
                 if (waitcost.Costs.Count > 0||Riichi||!IsOpen) 
                     {
                     TsumoAwailable = true;
-                    return;
+                    break;
                     }
         }
-        if (Riichi && kan==(null,null)) GameManager.StartCoroutine(PauseAfter_NoTsumoInRiichi_Routine());
+        if (TsumoAwailable) yield break;
+
+        if (Riichi && kan==(null,null))
+        {
+            yield return GameManager.WAIT_TIME;
+            GameManager.StartCoroutine(DiscardTile(Hand[^1])); //пауза, после сброс цумо тайла
+        }
+                                        
     }
 
-    private IEnumerator PauseAfter_NoTsumoInRiichi_Routine()
-    {
-        yield return new WaitForSeconds(GameManager.WAIT_TIME);
-        DiscardTile(Hand[^1]);
-    }
 
     public void TryAddDiscardWaitCost(DiscardWaitCost x)
     {
@@ -781,6 +856,9 @@ public class RealPlayer : IPlayer
         {
             WaitCosts = DiscardWaitCosts.Where(c => c.Discard.Equals(tile)).Select(c => c.WaitsCosts).FirstOrDefault();            
         }
+
+        if (WaitCosts.Any(t => Discard.Contains(t.Wait))) DiscardFuriten = true;
+        else DiscardFuriten = false;
         DiscardWaitCosts.Clear();
     }
 
@@ -795,12 +873,27 @@ public class RealPlayer : IPlayer
 
     public bool CheckForRon(Tile tile)
     {
+        if (TemporaryFuriten || PermanentFuriten||DiscardFuriten) return false;
         foreach (var waitcost in WaitCosts)
         {
-            if (waitcost.Wait == tile)
+            if (waitcost.Wait.Equals(tile))
                 return true;
         }
         return false;
+    }
+
+    public bool HasWaitOn(Tile tile)
+    {
+        if (tile != null)
+            if (WaitCosts.Any(t => t.Wait.Equals(tile)))
+                return true;
+        return false;
+    }
+
+    public bool isPon(List<Tile> block)
+    {
+        if (block.Count != 3) return false;
+        return block[0].Equals(block[1]) && block[0].Equals(block[2]);
     }
 }
 

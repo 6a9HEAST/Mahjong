@@ -73,7 +73,7 @@ public class YakuAnalyser
                     Wait = tile
                 };
                 var fu_points = CalculateFu(temp_complete_hand,tile);
-                temp_complete_hand.Last().Add(tile); //добавляем тайл из ожидания чтобы сделать полную руку
+                //temp_complete_hand.Last().Add(tile); //добавляем тайл из ожидания чтобы сделать полную руку
 
                 foreach (var checker in Checkers)//запускаем проверку на каждое яку
                 {

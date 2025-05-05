@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -8,6 +9,7 @@ using UnityEngine.XR;
 public class VictoryScreenView : MonoBehaviour
 {
     public GameObject Itself;
+    public GameObject Yakuscreen;
 
     public GameObject TilePrefab; // Префаб плитки
     public GameObject CallPrefab;
@@ -39,17 +41,21 @@ public class VictoryScreenView : MonoBehaviour
 
     private IPlayer Player;
 
-    public void Draw(IPlayer player, int[] score_change, int han, List<(string Yaku, int Cost)> yakus)
+    /// <summary>
+    /// Используется при рон или цумо
+    /// </summary>
+    public IEnumerator Draw(IPlayer player, int[] score_change, int han, List<(string Yaku, int Cost)> yakus)
     {
+        yield return new WaitForSeconds(2f);
         Itself.SetActive(true);
         Player = player;
         DrawHand(player.Hand);
         DrawCalls(player.Calls);
         DrawDoras();
         if (player.Riichi) DrawUraDoras();
-        DrawYaku(yakus);
+        
         DrawHan(han);
-        DrawLimit(han);
+        DrawLimit(han, score_change[player.index]);
         DrawPoints(score_change[player.index]);
 
         score_change[player.index] += player.GameManager.GetThenClearBet();
@@ -59,8 +65,41 @@ public class VictoryScreenView : MonoBehaviour
             plr.Score += score_change[plr.index];
         }
 
-            DrawPlayerBoxes(player.GameManager, score_change);
+        DrawPlayerBoxes(player.GameManager, score_change);
+        StartCoroutine(DrawYakuAndAnimate(yakus, player.GameManager, score_change, 2f));
         DrawContinueButton();
+    }
+    /// <summary>
+    /// Используется при ничьей
+    /// </summary>
+    public IEnumerator Draw(GameManager gameManager, int[] score_change)
+    {
+        yield return new WaitForSeconds(1f);
+        Itself.SetActive(true);
+        Yakuscreen.SetActive(false);
+
+        foreach (var player in gameManager.Players)
+            if (player.Wind == "East")
+                if (player.WaitCosts.Count > 0) Player = player;
+                else Player = gameManager.Players[(player.index + 1) % 4];
+
+        foreach (var plr in gameManager.Players)
+        {
+            plr.Score += score_change[plr.index];
+        }
+
+        DrawPlayerBoxes(gameManager, score_change);
+        yield return new WaitForSeconds(2f);
+        AnimateScoreChanges(gameManager, score_change, 2f);
+        DrawContinueButton();
+    }
+
+    private IEnumerator DrawYakuAndAnimate(List<(string Yaku, int Cost)> yakus, GameManager gm, int[] scoreChange, float duration)
+    {
+        // Сначала выполняем отрисовку яку
+        yield return StartCoroutine(DrawYaku(yakus));
+        // После завершения запускаем анимацию изменения счета
+        AnimateScoreChanges(gm, scoreChange, duration);
     }
 
     public void DrawHand(List<Tile> hand)
@@ -481,7 +520,7 @@ public class VictoryScreenView : MonoBehaviour
             tileView.SetTile(GameManager.UraDoraIndicator[i]);
         }
     }
-    public void DrawYaku(List<(string Yaku, int Cost)> yakus)
+    public IEnumerator DrawYaku(List<(string Yaku, int Cost)> yakus)
     {
         foreach (Transform child in YakuContainer)
         {
@@ -495,7 +534,9 @@ public class VictoryScreenView : MonoBehaviour
             var costText = yakuobject.transform.Find("Cost").GetComponent<TextMeshProUGUI>();
             nameText.text = yaku.Yaku;
             costText.text = yaku.Cost.ToString()+"хан";
+            yield return new WaitForSeconds(0.5f);
         }
+        yield return new WaitForSeconds(1f);
     }
 
     public void DrawHan(int han)
@@ -503,7 +544,7 @@ public class VictoryScreenView : MonoBehaviour
         HanIndicator.GetComponent<TextMeshProUGUI>().text = han.ToString()+"хан";
     }
 
-    public void DrawLimit(int han)
+    public void DrawLimit(int han,int score)
     {
         Dictionary<int, string> limits = new Dictionary<int, string>()
     {
@@ -522,7 +563,9 @@ public class VictoryScreenView : MonoBehaviour
         {13,"Якуман"}
     };
         string limit;
-        if (han<5) limit= "";
+        if (han < 5)
+            if (score == 8000 || score == 12000) limit = "Манган";
+            else limit= "";
         else if (han>=13) limit = limits[13];
         else limit = limits[han];   
         LimitIndicator.GetComponent<TextMeshProUGUI>().text = limit;
@@ -552,13 +595,65 @@ public class VictoryScreenView : MonoBehaviour
             score.text = gameManager.Players[i].Score.ToString();
 
             var deltaScore = PlayerBoxes[i].transform.Find("DeltaScore").GetComponent<TextMeshProUGUI>();
-            string plus = score_changes[i] > 0 ? "+" : "";
-            deltaScore.text = plus + score_changes[i].ToString();
+            if (score_changes[i]!=0) 
+            {                
+                string plus = score_changes[i] > 0 ? "+" : "";
+                deltaScore.text = plus + score_changes[i].ToString();
+            }
+            else deltaScore.text = "";
 
             var wind = PlayerBoxes[i].transform.Find("Wind").GetComponent<TextMeshProUGUI>();
             wind.text = winds[gameManager.Players[i].Wind];
-            if (wind.text=="В") wind.color = Color.red;
+            if (wind.text == "В") wind.color = Color.red;
+            else wind.color = Color.white;
         }
+    }
+
+    public void AnimateScoreChanges(GameManager gameManager, int[] score_changes, float duration)
+    {
+        for (int i = 0; i < PlayerBoxes.Count; i++)
+        {
+            if (score_changes[i]!=0) 
+                StartCoroutine(AnimatePlayerScore(
+                    playerIndex: i,
+                    targetScore: gameManager.Players[i].Score,
+                    initialDelta: score_changes[i],
+                    duration: duration
+                ));
+        }
+    }
+
+    private IEnumerator AnimatePlayerScore(int playerIndex, int targetScore, int initialDelta, float duration)
+    {
+        var scoreText = PlayerBoxes[playerIndex].transform.Find("Score").GetComponent<TextMeshProUGUI>();
+        var deltaText = PlayerBoxes[playerIndex].transform.Find("DeltaScore").GetComponent<TextMeshProUGUI>();
+
+        int startScore = targetScore - initialDelta;
+        float timer = 0f;
+
+        // Устанавливаем начальные значения для анимации
+        scoreText.text = startScore.ToString();
+        deltaText.text = $"{(initialDelta > 0 ? "+" : "")}{initialDelta}";
+
+        while (timer < duration)
+        {
+            timer += Time.deltaTime;
+            float progress = Mathf.Clamp01(timer / duration);
+
+            // Плавное изменение значений
+            int currentScore = Mathf.RoundToInt(Mathf.Lerp(startScore, targetScore, progress));
+            int currentDelta = Mathf.RoundToInt(Mathf.Lerp(initialDelta, 0, progress));
+
+            // Обновляем UI
+            scoreText.text = currentScore.ToString();
+            deltaText.text = $"{(currentDelta > 0 ? "+" : "")}{currentDelta}";
+
+            yield return null;
+        }
+
+        // Финализируем значения
+        scoreText.text = targetScore.ToString();
+        //deltaText.text = "";
     }
 
     public void DrawContinueButton()
@@ -582,6 +677,7 @@ public class VictoryScreenView : MonoBehaviour
 
     public void Hide()
     {
+        Yakuscreen.SetActive(true);
         Itself.SetActive(false);
     }
 }

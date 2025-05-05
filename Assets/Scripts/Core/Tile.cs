@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using System.Xml.Linq;
 using System;
+using static UnityEngine.InputManagerEntry;
 
 public class Tile 
 {
@@ -24,6 +25,17 @@ public class Tile
         //IsHonor = isHonor;
         Properties = new List<string>();
         if (property != null ) Properties.Add(property);
+    }
+
+    public Tile (Tile tile)
+    {
+        Suit = tile.Suit;
+        Rank = tile.Rank;
+        Properties = new List<string>();
+        foreach (var property in tile.Properties)
+        {
+            Properties.Add(property);
+        }
     }
 
     public bool IsRedFive()
@@ -68,7 +80,8 @@ public class Tile
 
     public void AddDiscardable()
     {
-        Properties.Add("Discardable");
+        if (!Properties.Contains("Discardable"))
+            Properties.Add("Discardable");
     }
 
     public bool IsDiscardable()
@@ -78,7 +91,31 @@ public class Tile
 
     public void RemoveDiscardable()
     {
-        Properties.Remove("Discardable");
+        if (Properties.Contains("Discardable"))
+            Properties.Remove("Discardable");
     }
+
+    public static readonly List<Tile> AllTiles = new()
+    {
+        // Маны
+        new("Man", "1"), new("Man", "2"),new("Man", "3"),new("Man", "4"),new("Man", "5"),new("Man", "6"),new("Man", "7"),new("Man", "8"),new("Man", "9"),
+
+        // Пины
+        new("Pin", "1"), new("Pin", "2"),new("Pin", "3"),new("Pin", "4"),new("Pin", "5"),new("Pin", "6"),new("Pin", "7"),new ("Pin", "8"),new("Pin", "9"),
+
+        // Соу
+        new("Sou", "1"), new("Sou", "2"),new("Sou", "3"),new("Sou", "4"),new("Sou", "5"),new("Sou", "6"),new("Sou", "7"),new("Sou", "8"),new("Sou", "9"),
+
+        // Четыре ветра
+        new("Wind", "East"),
+        new("Wind", "South"),
+        new("Wind", "West"),
+        new("Wind", "North"),
+
+        // Три дракона
+        new("Dragon", "White"),
+        new("Dragon", "Green"),
+        new("Dragon", "Red"),
+    };
 }
 

@@ -15,7 +15,8 @@ public class CallContainerView : MonoBehaviour
             Destroy(child.gameObject);
         }
     }
-
+    public float three_tiles_spacing = 1.63f;
+    public float pair_spacing = 1.31f;
     public void Draw(List<List<Tile>> calls)
     {
         // Очистка контейнера вызовов
@@ -32,6 +33,8 @@ public class CallContainerView : MonoBehaviour
                 continue;
             }
             GameObject callObj = Instantiate(CallPrefab, CallContainer);
+            HorizontalLayoutGroup callLayout = callObj.GetComponent<HorizontalLayoutGroup>();
+            callLayout.spacing = three_tiles_spacing;
             Transform tileContainer = callObj.transform;
 
             int i = 0;
@@ -48,7 +51,7 @@ public class CallContainerView : MonoBehaviour
                         pairGroup.transform.SetParent(tileContainer.transform, false);
                         
                         HorizontalLayoutGroup pairHLG = pairGroup.AddComponent<HorizontalLayoutGroup>();
-                        pairHLG.spacing = 1.35f;
+                        pairHLG.spacing = pair_spacing;
                         pairHLG.childAlignment = TextAnchor.MiddleCenter;
                         pairHLG.childForceExpandHeight = false;
                         pairHLG.childForceExpandWidth = false;
@@ -88,7 +91,8 @@ public class CallContainerView : MonoBehaviour
                 // Если у тайла в Properties содержится "Called", поворачиваем его на 90 градусов
                 if (call[i].Properties != null && call[i].Properties.Contains("Called"))
                 {
-                    tileObj.transform.rotation = Quaternion.Euler(0, 0, 90);
+                    tileObj.transform.localRotation = Quaternion.Euler(0, 0, 90);
+
                 }
                 TileView tileView = tileObj.GetComponent<TileView>();
                 if (tileView != null)

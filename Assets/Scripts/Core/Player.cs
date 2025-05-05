@@ -5,6 +5,8 @@ using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.XR;
+using Unity.Burst.Intrinsics;
+
 
 
 
@@ -20,6 +22,7 @@ public abstract class IPlayer
     public string Wind { get; set; }
     public GameManager GameManager { get; set; }
     public List<List<Tile>> Calls { get; set; }
+    public IHandView PlayerHandView { get; set; }
     public PlayerDiscardView PlayerDiscardView { get; set; }
     public CallContainerView CallContainerView { get; set; }
     public int Score { get; set; }
@@ -41,13 +44,15 @@ public abstract class IPlayer
     public void AddTile(Tile tile, bool isRoundStart = false)
     {
         Hand.Add(tile);
+        //DrawHand();
         if (!isRoundStart)
         {
+            //Debug.Log(Name + " " + Hand.Count);
             var kanCheck = CheckForKan(tile);
             if (kanCheck == 2 || kanCheck == 1)
             {
                 kan = (tile, this);
-                //ProceedCalls();
+                ProceedCalls();
             }
 
         }
@@ -75,10 +80,10 @@ public abstract class IPlayer
         Calls[^1][0].Properties.Add("Called");
 
         CallContainerView.Draw(Calls);
-        GameManager.PlayerHandView.Draw(Hand);
+        DrawHand();
         chi.player.PlayerDiscardView.Draw(chi.player.Discard);
         ClearCalls();
-        GameManager.EndTurn(0);
+        GameManager.EndTurn(index);
         GameManager.CallsButtonsView.Clear();
     }
 
@@ -118,10 +123,10 @@ public abstract class IPlayer
             Calls[^1][2].Properties.Add("Called");
         }
         CallContainerView.Draw(Calls);
-        GameManager.PlayerHandView.Draw(Hand);
+        DrawHand();
         pon.player.PlayerDiscardView.Draw(pon.player.Discard);
         ClearCalls();
-        GameManager.EndTurn(0);
+        GameManager.EndTurn(index);
         GameManager.CallsButtonsView.Clear();
 
         //// Здесь можно реализовать дополнительную логику оформления пон
@@ -152,7 +157,7 @@ public abstract class IPlayer
                     AddTile(GameManager.KanTiles[0]);
                     GameManager.KanTiles.RemoveAt(0);
                     GameManager.RevealDora();
-                    GameManager.PlayerHandView.Draw(Hand);
+                    DrawHand();
                     ClearCalls();
                     GameManager.CallsButtonsView.Clear();
                     return;
@@ -173,12 +178,12 @@ public abstract class IPlayer
             AddTile(GameManager.KanTiles[0]);
             GameManager.KanTiles.RemoveAt(0);
             GameManager.RevealDora();
-            GameManager.PlayerHandView.Draw(Hand);
+            DrawHand();
 
             ClearCalls();
             GameManager.CallsButtonsView.Clear();
 
-            GameManager.StartCoroutine(CheckForTsumo());
+            CheckForTsumo();
 
             return;
 
@@ -232,13 +237,13 @@ public abstract class IPlayer
         GameManager.KanTiles.RemoveAt(0);
 
         GameManager.RevealDora();
-        GameManager.PlayerHandView.Draw(Hand);
+        DrawHand();
         ClearCalls();
-        GameManager.EndTurn(0);
+        GameManager.EndTurn(index);
         GameManager.CallsButtonsView.Clear();
     }
 
-    public IEnumerator CheckForTsumo()
+    public bool CheckForTsumo()
     {
 
         foreach (var waitcost in WaitCosts)
@@ -248,16 +253,18 @@ public abstract class IPlayer
                 if (waitcost.Costs.Count > 0 || Riichi || !IsOpen)
                 {
                     TsumoAwailable = true;
-                    break;
+                    ProceedCalls();
+                    return true;
                 }
         }
-        if (TsumoAwailable) yield break;
 
         if (Riichi && kan == (null, null))
         {
             //yield return GameManager.WAIT_TIME;
             GameManager.StartCoroutine(DiscardTile(Hand[^1])); //пауза, после сброс цумо тайла
+            return true;
         }
+        return false;
 
     }
     public IEnumerator ExecutePass()
@@ -268,22 +275,22 @@ public abstract class IPlayer
             else TemporaryFuriten = true;
 
         ClearCalls();
-        if (Riichi)
-        {
+        if (Riichi)      
+        {            
             yield return GameManager.WAIT_TIME;
-            GameManager.EndTurn();
+            GameManager.StartCoroutine(GameManager.Executecalls());
         }
-        else
-        if (!IsActive)
-            GameManager.EndTurn();
+        else if (!IsActive)
+            GameManager.StartCoroutine(GameManager.Executecalls());
     }
 
     public void ExecuteTsumo()
     {
+        
         var wait_cost = WaitCosts.FirstOrDefault(t => t.Wait.Equals(Hand[^1]));//находим стоимость руки с цумо тайлом
 
         var fu = wait_cost.Costs.FirstOrDefault(a => a.Yaku == "Fu");//находим количество минипоинтов
-
+        wait_cost.Costs.Remove(fu);
         fu.Cost += 2; //надбавка за цумо
 
         fu.Cost += 20; //минимальная базовая стоимость
@@ -302,7 +309,11 @@ public abstract class IPlayer
             wait_cost.Costs.Insert(0, ("Риичи", 1));
         }
 
+        wait_cost.Costs.Add(fu);
 
+        foreach (var tile in Hand) tile.RemoveDiscardable(); 
+
+        PlayerHandView.DrawOpenHand(Hand);
         var round_end = new RoundEndCalculator();
         round_end.CountTsumoPoints(this, wait_cost.Costs);
 
@@ -313,15 +324,15 @@ public abstract class IPlayer
         var wait_cost = WaitCosts.FirstOrDefault(t => t.Wait.Equals(ron.tile));
 
         var fu = wait_cost.Costs.FirstOrDefault(a => a.Yaku == "Fu");//находим количество минипоинтов
-
+        wait_cost.Costs.Remove(fu);
         fu.Cost += 20; //минимальная базовая стоимость
-        if (IsOpen) fu.Cost += 10; //надбавка за рон с закрытой рукой
+        if (!IsOpen) fu.Cost += 10; //надбавка за рон с закрытой рукой
 
         if (wait_cost.Costs.Any(z => z.Yaku == "Семь пар"))
             fu.Cost = 25;//фиксированная стоимость 7 пар
         else
             fu.Cost = (int)Ceiling(fu.Cost / 10.0) * 10;//округление очков фу в большую сторону
-
+        wait_cost.Costs.Add(fu);
         if (Riichi)
         {
             if (Ippatsu) wait_cost.Costs.Insert(0, ("Иппацу", 1));
@@ -330,6 +341,10 @@ public abstract class IPlayer
         }
 
         Hand.Add(ron.tile);
+
+        foreach (var tile in Hand) tile.RemoveDiscardable();
+
+        PlayerHandView.DrawOpenHand(Hand);
 
         var round_end = new RoundEndCalculator();
         round_end.CountRonPoints(this, ron.player, wait_cost.Costs);
@@ -372,7 +387,32 @@ public abstract class IPlayer
                 return true;
         return false;
     }
-    public abstract IEnumerator DiscardTile(Tile tile);
+    //public abstract IEnumerator DiscardTile(Tile tile);
+
+    public  IEnumerator DiscardTile(Tile tile)
+    {
+        if (!Riichi)
+            UpgradeWaits(tile);
+        TemporaryFuriten = false;
+        Ippatsu = false;
+        tile.RemoveDiscardable();
+        //Hand.Remove(tile);
+
+        int idx = Hand.FindIndex(t => ReferenceEquals(t, tile));
+        if (idx >= 0)
+            Hand.RemoveAt(idx);
+
+        SortHand();
+        DrawHand();
+
+        Discard.Add(tile);
+        PlayerDiscardView.Draw(Discard);
+
+        TileCounts[tile.ToString()]--;
+
+        yield return GameManager.WAIT_TIME;
+        GameManager.CheckForCalls(tile, this);
+    }
     public void ClearCalls()
     {
         pon = (null, null);
@@ -476,15 +516,17 @@ public abstract class IPlayer
         ClearCalls();
         Calls.Clear();
         IsOpen = false;
+        DiscardFuriten = false;
+        TemporaryFuriten = false;
+        PermanentFuriten = false;
+        DiscardWaitCosts.Clear();
+        WaitCosts.Clear();
     }
 
     // Если какой-либо вызов объявлен, возвращается true
     public bool HasCalls()
-    {
-        if (pon != (null, null) || kan != (null, null) || chi != (null, null)||ron!=(null,null))
-            return true;
-        else
-            return false;
+    {       
+      return pon != (null, null) || kan != (null, null) || chi != (null, null) || ron != (null, null);       
     }
 
     // Метод, который должен обработать вызовы (реализуется по-разному для ИИ и реального игрока)
@@ -495,7 +537,7 @@ public abstract class IPlayer
         var copy_pon = pon;
         ClearCalls();
         pon = copy_pon;
-        GameManager.Executecalls();
+        GameManager.StartCoroutine(GameManager.Executecalls());
     }
 
     public void CallChi()
@@ -503,7 +545,7 @@ public abstract class IPlayer
         var copy_chi = chi;
         ClearCalls();
         chi = copy_chi;
-        GameManager.Executecalls();
+        GameManager.StartCoroutine(GameManager.Executecalls());
     }
 
     public void CallKan()
@@ -511,7 +553,7 @@ public abstract class IPlayer
         var copy_kan = kan;
         ClearCalls();
         kan = copy_kan;
-        GameManager.Executecalls();
+        GameManager.StartCoroutine(GameManager.Executecalls());
     }
 
     public void CallRon()
@@ -519,13 +561,29 @@ public abstract class IPlayer
         var copy_ron = ron;
         ClearCalls();
         ron = copy_ron;
-        GameManager.Executecalls();
+        GameManager.StartCoroutine(GameManager.Executecalls());
     }
 
     public bool IsPon(List<Tile> block)
     {
         if (block.Count != 3) return false;
         return block[0].Equals(block[1]) && block[0].Equals(block[2]);
+    }
+
+    public void DrawHand()
+    {
+        PlayerHandView.Draw(Hand);
+    }
+
+    public void SortHand()
+    {
+        PlayerHandView.Sort(Hand);
+        PlayerHandView.Draw(Hand);
+    }
+
+    public void DrawDiscard()
+    {
+        PlayerDiscardView.Draw(Discard);
     }
 }
 
@@ -534,7 +592,9 @@ public abstract class IPlayer
 
 public class AiPlayer : IPlayer
 {
-    public AiPlayer(string name, GameManager gameManager, PlayerDiscardView playerDiscardView,
+    private AiHandAnalyzer AiHandAnalyzer;
+
+    public AiPlayer(string name, GameManager gameManager, PlayerDiscardView playerDiscardView, IHandView playerHandView,
         CallContainerView callContainerView,int index)
     {
         Name = name;
@@ -554,29 +614,82 @@ public class AiPlayer : IPlayer
         HandAnalyzer = new HandAnalyzer(this);
         DiscardWaitCosts = new List<DiscardWaitCost>();
         WaitCosts = new List<WaitCost>();
+        PlayerHandView = playerHandView;
+        AiHandAnalyzer = new AiHandAnalyzer(this);
     }
     public override void StartTurn()
     {
-        if (GameManager.TEST_TILES2.Count>0&&index==3&&GameManager.TEST_HAND)
-        {
-            GameManager.StartCoroutine(DiscardTile(GameManager.TEST_TILES2[0]));
-            GameManager.TEST_TILES2.RemoveAt(0);
-        }
-        else
-        {
-            int index = Random.Range(0, Hand.Count);
-            GameManager.StartCoroutine(DiscardTile(Hand[index]));
-        }
+        if (CheckForTsumo()) return; //если есть цумо или автосброс в риичи то return
+        
+        if (TryDeclareRiichi()) return; //если можно объявить риичи то return
+
+        if (FindEasyDiscard()) return; //если есть одиночный несредний то сбрасываем его
+
+        var bestDiscard = AiHandAnalyzer.GetBestDiscard(); //поиск лушчего тайла для дискарда
+
+        GameManager.StartCoroutine(DiscardTile(bestDiscard));
+
     }
     public override void ProceedCalls()
     {
+        if (ron != (null, null))
+        {
+            CallRon();
+            return;
+        }
+
+        if (kan != (null, null))
+            if (kan.tile.Suit == "Dragon" || kan.tile.Rank == Wind || kan.tile.Rank == GameManager.RoundWind)
+            {
+                CallKan();
+                return;
+            }
+
         if (pon!=(null,null))
             if (pon.tile.Suit=="Dragon"||pon.tile.Rank==Wind||pon.tile.Rank==GameManager.RoundWind)
-                { 
+            { 
                 CallPon();
                 return;
             }
+
+        if (TsumoAwailable)
+        {
+            ExecuteTsumo();
+            return;
+        }
+        
+
+        //if (chi!=(null,null))
+        //{
+        //    CallChi();
+        //    return;
+        //}
         GameManager.StartCoroutine(ExecutePass());
+    }
+
+    public bool TryDeclareRiichi()
+    {
+        if (!Riichi && DiscardWaitCosts.Count > 0 && !IsOpen)
+        {
+            Riichi = true;
+            Ippatsu = true;
+
+            int discardIndex= DiscardWaitCosts.Select((value, index) => new { value, index })
+            .Aggregate((a, b) => a.value.WaitsCosts.Count > b.value.WaitsCosts.Count ? a : b)
+            .index;//нахождение самого дорого ожидания
+
+            Tile tile = new(DiscardWaitCosts[discardIndex].Discard);
+
+            UpgradeWaits(tile);
+            GameManager.ProcessRiichi(this);
+            tile.Properties.Add("Riichi");
+            
+            GameManager.StartCoroutine(DiscardTile(tile));
+            DrawDiscard();
+            return true;
+
+        }
+        return false;
     }
 
     public override void UpgradeWaits(Tile tile)// OVERRIDE
@@ -593,24 +706,118 @@ public class AiPlayer : IPlayer
         DiscardWaitCosts.Clear();
     }
 
-    public override IEnumerator DiscardTile(Tile tile)
+    //public override IEnumerator DiscardTile(Tile tile)
+    //{
+    //    if (!Riichi)
+    //        UpgradeWaits(tile);
+    //    TemporaryFuriten = false;
+    //    Ippatsu = false;
+    //    Hand.Remove(tile);
+    //    //GameManager.PlayerHandView.Sort(Hand);
+    //    //GameManager.PlayerHandView.Draw(Hand);
+
+    //    Discard.Add(tile);
+    //    PlayerDiscardView.Draw(Discard);
+
+    //    TileCounts[tile.ToString()]--;
+
+    //    yield return GameManager.WAIT_TIME;
+    //    GameManager.CheckForCalls(tile, this);
+    //}
+
+    public bool FindEasyDiscard()
     {
-        if (!Riichi)
-            UpgradeWaits(tile);
-        TemporaryFuriten = false;
-        Ippatsu = false;
-        Hand.Remove(tile);
-        //GameManager.PlayerHandView.Sort(Hand);
-        //GameManager.PlayerHandView.Draw(Hand);
+        foreach (Tile tile in Hand)
+        {
+            if (IsSingle(tile) && IsPriority1(tile))
+            {
+                GameManager.StartCoroutine(DiscardTile(tile));
+                return true;
+            }
+        }
 
-        Discard.Add(tile);
-        PlayerDiscardView.Draw(Discard);
+        //foreach (Tile tile in Hand)
+        //{
+        //    if (IsSingle(tile) && IsPriority2(tile))
+        //    {
+        //        GameManager.StartCoroutine(DiscardTile(tile));
+        //        return true;
+        //    }
+        //}
 
-        TileCounts[tile.ToString()]--;
+        foreach (Tile tile in Hand)
+        {
+            if (IsSingle(tile) && IsPriority3(tile))
+            {
+                GameManager.StartCoroutine(DiscardTile(tile));
+                return true;
+            }
+        }
 
-        yield return GameManager.WAIT_TIME;
-        GameManager.CheckForCalls(tile, this);
+        foreach (Tile tile in Hand)
+        {
+            if (IsSingle(tile) && IsPriority4(tile))
+            {
+                GameManager.StartCoroutine(DiscardTile(tile));
+                return true;
+            }
+        }
+
+        return false;
     }
+
+    private bool IsSingle(Tile tile)
+    {
+        return TileCounts[tile.ToString()] == 1;
+    }
+
+    private bool IsPriority1(Tile tile)
+    {
+        return tile.Suit == "Wind"
+            && tile.Rank != Wind
+            && tile.Rank != GameManager.RoundWind;
+    } // Является ли ветер не ветром игрока и раунда
+
+    private bool IsPriority2(Tile tile)
+    {
+        return (tile.Rank=="1"||tile.Rank=="9") && !HasNeighbor(tile);
+    } // Является ли тайл изолированным терминалом
+
+
+    private bool HasNeighbor(Tile tile)
+    {        
+        string neighborRank = null;
+
+        if (tile.Rank == "1")
+            neighborRank = "2";
+        else if (tile.Rank == "9")
+            neighborRank = "8";
+        else
+            return false;
+
+        return Hand.Any(t => t.Suit == tile.Suit && t.Rank == neighborRank);
+    }
+
+    private bool IsPriority3(Tile tile)
+    {
+        if (tile.Suit == "Dragon")
+            return true;
+
+        if (tile.Suit == "Wind")
+        {
+            bool isPlayerOrRoundWind = tile.Rank == Wind || tile.Rank == GameManager.RoundWind;
+            return isPlayerOrRoundWind && (Wind != GameManager.RoundWind);
+        }
+
+        return false;
+    } // Является ли тайл драконом или ветром игрока или раунда
+
+    private bool IsPriority4(Tile tile)
+    {
+        return tile.Suit == "Wind"
+            && Wind == GameManager.RoundWind
+            && tile.Rank == Wind;
+    } //Двойной ветер
 }
 
 
@@ -618,7 +825,7 @@ public class AiPlayer : IPlayer
 
 public class RealPlayer : IPlayer
 {
-    public RealPlayer(string name, GameManager gameManager, PlayerDiscardView playerDiscardView,
+    public RealPlayer(string name, GameManager gameManager, PlayerDiscardView playerDiscardView, IHandView playerHandView,
         CallContainerView callContainerView,int index)
     {
         Name = name;
@@ -641,32 +848,44 @@ public class RealPlayer : IPlayer
         HandAnalyzer = new HandAnalyzer(this);
         DiscardWaitCosts = new List<DiscardWaitCost>();
         WaitCosts = new List<WaitCost>();
+        PlayerHandView = playerHandView;
     }
     public override void StartTurn()
     {
-        GameManager.StartCoroutine(CheckForTsumo());
-        ProceedCalls();        
+        CheckForTsumo();
+        CheckForRiichi();
+        //ProceedCalls();        
     }
-    public override IEnumerator DiscardTile(Tile tile)
+    //public override IEnumerator DiscardTile(Tile tile)
+    //{
+    //    if (!Riichi)
+    //        UpgradeWaits(tile);
+    //    TemporaryFuriten = false;
+    //    Ippatsu = false;
+    //    Hand.Remove(tile);
+    //    SortHand();
+    //    DrawHand();
+
+    //    Discard.Add(tile);
+    //    PlayerDiscardView.Draw(Discard);
+
+    //    TileCounts[tile.ToString()]--;
+
+    //    yield return GameManager.WAIT_TIME;
+    //    GameManager.CheckForCalls(tile, this);
+    //}
+
+    public void CheckForRiichi()
     {
-        if (!Riichi)
-            UpgradeWaits(tile);
-        TemporaryFuriten = false;
-        Ippatsu = false;
-        Hand.Remove(tile);
-        GameManager.PlayerHandView.Sort(Hand);
-        GameManager.PlayerHandView.Draw(Hand);
+        bool buttoncreated = false;
+        if (!IsOpen && DiscardWaitCosts.Count > 0 && GameManager.Wall.Count > 4 && !Riichi && IsActive)
+        {
+            GameManager.CallsButtonsView.CreateRiichiButton();
+            buttoncreated = true;
+        }
+        if (buttoncreated) GameManager.CallsButtonsView.CreatePassButton();
 
-        Discard.Add(tile);
-        PlayerDiscardView.Draw(Discard);
-
-        TileCounts[tile.ToString()]--;
-
-        yield return GameManager.WAIT_TIME;
-        GameManager.CheckForCalls(tile, this);
     }
-
-
     /// <summary>
     /// Добавляет кнопки для возможных вызовов и кнопку для пропуска
     /// </summary>
@@ -689,21 +908,26 @@ public class RealPlayer : IPlayer
         if (pon != (null, null))
             { 
             GameManager.CallsButtonsView.CreatePonButton();
+            GameManager.CallsButtonsView.CreateCallIndicator(pon.player);
             buttoncreated = true;
         }
         if (kan != (null, null))
             { 
             GameManager.CallsButtonsView.CreateKanButton();
+            if (kan.player != this)
+                GameManager.CallsButtonsView.CreateCallIndicator(kan.player);
             buttoncreated = true;
             }
         if (chi != (null, null))
             { 
             GameManager.CallsButtonsView.CreateChiButton();
+            GameManager.CallsButtonsView.CreateCallIndicator(chi.player);
             buttoncreated = true;
             }
         if ( ron!= (null, null))
         {
             GameManager.CallsButtonsView.CreateRonButton();
+            GameManager.CallsButtonsView.CreateCallIndicator(ron.player);
             buttoncreated = true;
         }
         if (buttoncreated)GameManager.CallsButtonsView.CreatePassButton();
@@ -712,7 +936,7 @@ public class RealPlayer : IPlayer
     /// <summary>
     /// Если сброшенный тайл есть в списке дискард-ожидания, то обновляем ожидания игрока  на тайлы
     /// </summary>
-    public override void UpgradeWaits(Tile tile)// OVERRIDE
+    public override void UpgradeWaits(Tile tile)
     {
         
         WaitCosts.Clear();

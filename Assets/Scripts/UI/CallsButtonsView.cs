@@ -6,11 +6,15 @@ using UnityEngine.UI;
 public class CallsButtonsView : MonoBehaviour
 {
     public GameObject buttonPrefab; // Префаб кнопки с компонентом Button и Text
+    public GameObject IndicatorPrefab;
+
     public Transform ButtonsRow1;
     public Transform ButtonsRow2;
+    public GameObject CallIndicator { get; private set; }
+
     public IPlayer player;
     public int buttonsCreated = 0;
-
+    public bool indicatorCreated=false;
     public void CreateChiButton()
     {
         GameObject btn;
@@ -36,7 +40,6 @@ public class CallsButtonsView : MonoBehaviour
         }
         buttonsCreated++;
     }
-
     private void OnChiButtonClicked()
     {
         player.CallChi();
@@ -67,7 +70,6 @@ public class CallsButtonsView : MonoBehaviour
         }
         buttonsCreated++;
     }
-
     private void OnPonButtonClicked()
     {
         player.CallPon();
@@ -97,7 +99,6 @@ public class CallsButtonsView : MonoBehaviour
         }
         buttonsCreated++;
     }
-
     private void OnKanButtonClicked()
     {
         player.CallKan();
@@ -127,7 +128,6 @@ public class CallsButtonsView : MonoBehaviour
         }
         buttonsCreated++;
     }
-
     private void OnPassButtonClicked()
     {
         Clear();
@@ -146,7 +146,9 @@ public class CallsButtonsView : MonoBehaviour
             Destroy(child.gameObject);
         }
         buttonsCreated = 0;
-        
+        indicatorCreated = false;
+        if (CallIndicator!=null)
+            Destroy(CallIndicator);
     }
 
     public void CreateRiichiButton()
@@ -172,7 +174,6 @@ public class CallsButtonsView : MonoBehaviour
         }
         buttonsCreated++;
     }
-
     public void OnRiichiButtonClicked()
     {
         player.Riichi = true;
@@ -235,7 +236,6 @@ public class CallsButtonsView : MonoBehaviour
         }
         buttonsCreated++;
     }
-
     public void OnTsumoButtonClicked()
     {
         player.ExecuteTsumo();
@@ -267,5 +267,39 @@ public class CallsButtonsView : MonoBehaviour
     public void OnRonButtonClicked()
     {
     player.CallRon();
+    }
+
+    public void CreateCallIndicator(IPlayer player)
+    {
+        if (indicatorCreated) return;
+
+        var spawnPosition = player.PlayerDiscardView.GetLastTilePosition(player.Discard);
+
+        if (IndicatorPrefab != null)
+        {
+            GameObject instance = Instantiate(
+                IndicatorPrefab,
+                spawnPosition,
+                Quaternion.identity
+            );
+
+            instance.name = "CallIndicator";
+
+            // Добавляем вращение
+            Rotator rotator = instance.AddComponent<Rotator>();
+
+            //rotator.rotationSpeed = 180f;
+            //rotator.rotationAxis = Vector3.up; Веселая ось
+
+            rotator.rotationSpeed = 51f;
+            rotator.rotationAxis = new Vector3(0,0,1); 
+
+            CallIndicator = instance;
+            indicatorCreated = true;
+        }
+        else
+        {
+            Debug.LogError("Prefab reference is missing!");
+        }
     }
 }

@@ -16,7 +16,7 @@ public class HandAnalyzer
 
     public void AnalyzeHand()
     {
-        if (Player.index != 0) return;
+        //if (Player.index != 0) return;
         // Создание копии руки игрока
         List<Tile> sortedHand = new List<Tile>(Player.Hand);
         Sort(sortedHand);

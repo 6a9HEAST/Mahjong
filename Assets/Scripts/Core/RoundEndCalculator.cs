@@ -33,12 +33,14 @@ public class RoundEndCalculator
         if (doras.Cost!=0)
             yakus.Add(doras);
 
-        if (winner.Riichi)
-            yakus.Add(CalculateUraDoras(winner));
-
         var redFives = CalculateRedFives(winner);
         if (redFives.Cost != 0)
             yakus.Add(redFives);
+
+        if (winner.Riichi)
+            yakus.Add(CalculateUraDoras(winner));
+
+        
 
         int han = yakus.Sum(a => a.Cost);
         var points = CalculateTsumoPoints(han, fu.Cost);
@@ -81,12 +83,12 @@ public class RoundEndCalculator
         if (doras.Cost!=0)
             yakus.Add(doras);
 
-        if (winner.Riichi)
-            yakus.Add(CalculateUraDoras(winner));
-
         var redFives = CalculateRedFives(winner);
         if (redFives.Cost != 0)
             yakus.Add(redFives);
+
+        if (winner.Riichi)
+            yakus.Add(CalculateUraDoras(winner));        
 
         int han = yakus.Sum(a => a.Cost);
 
@@ -95,8 +97,8 @@ public class RoundEndCalculator
         int[] pts_changes = new int[4] { 0, 0, 0, 0 };
 
         int final_points;
-        if (winner.Wind == "East") final_points= (int)Ceiling(points*6 / 1000.0) * 1000;   
-        else final_points = (int)Ceiling(points * 4 / 1000.0) * 1000;
+        if (winner.Wind == "East") final_points= (int)Ceiling(points*6 / 100.0) * 100;   
+        else final_points = (int)Ceiling(points * 4 / 100.0) * 100;
             
         pts_changes[winner.index] += final_points;
         pts_changes[deal_in.index] -= final_points;
@@ -125,7 +127,12 @@ public class RoundEndCalculator
         if (han >= 5) return limits[han]; //если хан 5 и выше, то фиксированная стоимость
                                               //(стоимость лимита*4)
         else
-            return (int)(fu * Pow(2, 2 + han));
+        {
+            var pts= (int)(fu * Pow(2, 2 + han));
+            if (pts > 2000) pts = 2000;
+            return pts;
+        }
+            
     }
 
     private (string Yaku,int Cost) CalculateDoras(IPlayer player)
@@ -135,15 +142,15 @@ public class RoundEndCalculator
 
         int count = 0;
 
-        foreach (var  tile in player.Hand)
-        {
-            foreach (var dora in doras)
-            {
-                if (dora.Equals(tile))
-                    count++;
-            }           
-        }
-        
+        foreach (var  tile in player.Hand) 
+            foreach (var dora in doras)           
+                if (dora.Equals(tile)) count++;   
+
+        foreach (var call in player.Calls)
+            foreach (var tile in call)
+                foreach (var dora in doras)
+                    if (dora.Equals(tile)) count++;
+
         return ("Дора",count);
 
     }
@@ -154,13 +161,14 @@ public class RoundEndCalculator
         int count = 0;
 
         foreach (var tile in player.Hand)
-        {
             foreach (var ura_dora in ura_doras)
-            {
-                if (ura_dora.Equals(tile))
-                    count++;
-            }
-        }
+                if (ura_dora.Equals(tile)) count++;
+
+        foreach (var call in player.Calls)
+            foreach (var tile in call)
+                foreach (var ura_dora in ura_doras)
+                    if (ura_dora.Equals(tile)) count++;
+
         return ("Скрытая Дора", count);
     }
 
@@ -173,7 +181,12 @@ public class RoundEndCalculator
             if (tile.Properties.Contains("Red"))
                 count++;
         }
-        return ("Ака дора", count);
+
+        foreach (var call in player.Calls)
+            foreach (var tile in call)
+                if (tile.Properties.Contains("Red")) count++;
+
+        return ("Красная пятерка", count);
     }
 
 

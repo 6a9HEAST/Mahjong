@@ -20,13 +20,10 @@ public class PlayerDiscardView : MonoBehaviour
 
     public void Draw (List<Tile> Discard)
     {
-
-        // 1. Clear previous
         ClearContainer(DiscardContainer1);
         ClearContainer(DiscardContainer2);
         ClearContainer(DiscardContainer3);
 
-        // 2. Partition into three rows
         var rows = new List<Tile>[3] {
             new List<Tile>(),
             new List<Tile>(),
@@ -38,7 +35,6 @@ public class PlayerDiscardView : MonoBehaviour
             rows[rowIndex].Add(Discard[i]);
         }
 
-        // 3. Render each row
         for (int r = 0; r < 3; r++)
         {
             Transform container = GetContainer(r);
@@ -53,18 +49,12 @@ public class PlayerDiscardView : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Clears all children of a container.
-    /// </summary>
     private void ClearContainer(Transform container)
     {
         foreach (Transform child in container)
             Destroy(child.gameObject);
     }
 
-    /// <summary>
-    /// Returns the corresponding container for the given row index.
-    /// </summary>
     private Transform GetContainer(int index)
     {
         switch (index)
@@ -75,22 +65,17 @@ public class PlayerDiscardView : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Renders a single row of tiles, inserting left/right subcontainers around a Riichi tile if present.
-    /// </summary>
     private void RenderRow(List<Tile> rowTiles, Transform container)
     {
         // Find Riichi position
         int riichiPos = rowTiles.FindIndex(t => t.Properties.Contains("Riichi"));
         if (riichiPos < 0)
         {
-            // No special tile: just instantiate all normally
             foreach (var tile in rowTiles)
                 InstantiateTile(container, tile, false);
             return;
         }
 
-        // 1) Left group
         if (riichiPos > 0)
         {
             var leftGO = new GameObject("LeftContainer");
@@ -101,10 +86,10 @@ public class PlayerDiscardView : MonoBehaviour
                 InstantiateTile(leftGO.transform, rowTiles[i], false);
         }
 
-        // 2) Riichi tile (flipped)
+
         InstantiateTile(container, rowTiles[riichiPos], true);
 
-        // 3) Right group
+
         var rightGO = new GameObject("RightContainer");
         rightGO.transform.SetParent(container, false);
         var rightLayout = rightGO.AddComponent<HorizontalLayoutGroup>();
@@ -112,27 +97,53 @@ public class PlayerDiscardView : MonoBehaviour
         for (int i = riichiPos + 1; i < rowTiles.Count; i++)
             InstantiateTile(rightGO.transform, rowTiles[i], false);
     }
-
-    /// <summary>
-    /// Instantiates a tile prefab under the given parent, sets its data, and flips if needed.
-    /// </summary>
     private void InstantiateTile(Transform parent, Tile tile, bool flip)
     {
         var obj = Instantiate(TilePrefab, parent);
         var view = obj.GetComponent<TileView>();
         view.SetTile(tile);
         if (flip)
-        {
-            // Flip horizontally
-            //var scale = obj.transform.localScale;
-            obj.transform.rotation = Quaternion.Euler(0, 0, 90);
+        {            
+            obj.transform.localRotation = Quaternion.Euler(0, 0, 90);
         }
-        else
+    }
+
+    public Vector3 GetLastTilePosition(List<Tile> Discard)
+    {
+        if (Discard == null || Discard.Count == 0)
+            return Vector3.zero;
+
+        // Определяем индекс последней строки
+        int lastRowIndex = Mathf.Min(2, (Discard.Count - 1) / 6);
+        Transform lastRowContainer = GetContainer(lastRowIndex);
+
+        // Принудительное обновление лейаута
+        LayoutRebuilder.ForceRebuildLayoutImmediate(lastRowContainer as RectTransform);
+
+        // Ищем последний тайл с учетом вложенных контейнеров
+        Transform lastTile = FindLastTileRecursive(lastRowContainer);
+
+        return lastTile != null
+            ? lastTile.position
+            : Vector3.zero;
+    }
+
+    private Transform FindLastTileRecursive(Transform container)
+    {
+        // Проверяем детей в обратном порядке
+        for (int i = container.childCount - 1; i >= 0; i--)
         {
-            // Ensure normal scale
-            //obj.transform.localScale = Vector3.one;
+            Transform child = container.GetChild(i);
+
+            // Если это сам тайл
+            if (child.GetComponent<TileView>() != null)
+                return child;
+
+            // Рекурсивный поиск во вложенных контейнерах
+            Transform foundTile = FindLastTileRecursive(child);
+            if (foundTile != null)
+                return foundTile;
         }
-
-
+        return null;
     }
 }

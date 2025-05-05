@@ -2,23 +2,20 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    public PlayerHandView PlayerHandView;
-    public PlayerDiscardView Player1DiscardView;
-    public PlayerDiscardView Player2DiscardView;
-    public PlayerDiscardView Player3DiscardView;
-    public PlayerDiscardView Player4DiscardView;
+    public List<IHandView> HandViews;
 
-    public CallContainerView Player1CallContainerView;
-    public CallContainerView Player2CallContainerView;
-    public CallContainerView Player3CallContainerView;
-    public CallContainerView Player4CallContainerView;
+    public List<PlayerDiscardView> playerDiscardViews;
+
+    public List<CallContainerView> playerCallContainerViews;
+
+    public List<CallTextView> callTextViews;
 
     public VictoryScreenView VictoryScreenView;
-
     public CenterView CenterView;
     public DoraIndicatorView DoraIndicatorView;
     public CallsButtonsView CallsButtonsView;
@@ -27,6 +24,8 @@ public class GameManager : MonoBehaviour
     public List<Tile> DoraIndicator { get; private set; } = new List<Tile>();
     public List<Tile> UraDoraIndicator { get; private set; } = new List<Tile>();
     public List<Tile> KanTiles { get; private set; } = new List<Tile>();
+
+    
     public int DorasShown { get; private set; }
     public int ActivePlayer { get; private set; }
     public int Dealer { get; private set; }
@@ -37,14 +36,13 @@ public class GameManager : MonoBehaviour
 
     public bool VictoryScreen { get; private set; } = false;
 
-    public bool TEST_HAND = false;
-    public List<Tile> TEST_TILES=new List<Tile>();
-    public List<Tile> TEST_TILES2=new List<Tile>();
+    public bool TEST_HAND = true;
+    public List<Tile> TEST_TILES=new();
+    public List<Tile> TEST_TILES2=new();
 
-    public WaitForSeconds WAIT_TIME = new WaitForSeconds(0.3f);
+    public WaitForSeconds WAIT_TIME = new(0.3f);
 
-    // Список игроков, от которых ждём решения по вызовам (пон, чи, кан)
-    private List<IPlayer> pendingCallPlayers = new List<IPlayer>();
+    
     public int callsSent = 0;
 
     private void Start()
@@ -58,14 +56,16 @@ public class GameManager : MonoBehaviour
 
         Players = new List<IPlayer>()
         {
-            new RealPlayer("Player 1", this, Player1DiscardView,Player1CallContainerView,0),
-            new AiPlayer("Player 2", this, Player2DiscardView,Player2CallContainerView, 1),
-            new AiPlayer("Player 3", this, Player3DiscardView,Player3CallContainerView, 2),
-            new AiPlayer("Player 4", this, Player4DiscardView,Player4CallContainerView, 3)
+            new RealPlayer("Player 1", this, playerDiscardViews[0],HandViews[0],playerCallContainerViews[0],0),
+            new AiPlayer("Player 2", this, playerDiscardViews[1],HandViews[1],playerCallContainerViews[1], 1),
+            new AiPlayer("Player 3", this, playerDiscardViews[2],HandViews[2], playerCallContainerViews[2], 2),
+            new AiPlayer("Player 4", this, playerDiscardViews[3],HandViews[3], playerCallContainerViews[3], 3)
         };
         foreach (var player in Players)
             player.Score = 25000;
 
+        foreach (var text in callTextViews)
+            text.Clear();
         CallsButtonsView.player = Players[0];
         ActivePlayer = -1;
         PrepareRound();
@@ -78,7 +78,7 @@ public class GameManager : MonoBehaviour
         Tile tile=null;
         if (afterCall == -1)
         {
-            if (TEST_HAND && TEST_TILES.Count > 0 && ActivePlayer==0)
+            if (TEST_HAND && TEST_TILES.Count > 0 && ActivePlayer==1)
             {
                 currentPlayer.AddTile(TEST_TILES[0]);
                 tile = TEST_TILES[0];
@@ -87,8 +87,9 @@ public class GameManager : MonoBehaviour
             else
 
             {
-                currentPlayer.AddTile(Wall[0]);
-                tile = Wall[0];
+                tile = new(Wall[0]);
+                currentPlayer.AddTile(tile);
+                //tile = Wall[0];
                 Wall.RemoveAt(0);
             }
         }
@@ -97,26 +98,20 @@ public class GameManager : MonoBehaviour
         if (!Players[ActivePlayer].Riichi && !Players[ActivePlayer].HasWaitOn(tile)) 
             Players[ActivePlayer].HandAnalyzer.AnalyzeHand();
 
-        PlayerHandView.Draw(Players[0].Hand);
-        
+        Players[ActivePlayer].DrawHand();
+
         CenterView.UpdateTilesRemaining(Wall.Count);
         currentPlayer.StartTurn();
     }
 
     public void EndTurn(int newActivePlayer=-1)
-    {
-        //Debug.Log(Players[ActivePlayer].Name + " заканчивает ход");
-        // Если остались игроки, от которых ждём решения по вызовам – не переходим к следующему ходу.
-        if (pendingCallPlayers.Count > 0)
-        {
-            Debug.Log("Ожидание решений по вызовам, переход хода отложен.");
-            return;
-        }
+    {        
         if (Wall.Count == 0)
         {
             ExhaustiveDraw();
             return;
         }
+
         Players[ActivePlayer].IsActive = false;
 
         if (newActivePlayer == -1)//После объявления посылается индекс игрока который сделал объявление
@@ -133,13 +128,15 @@ public class GameManager : MonoBehaviour
         DoraIndicator.Clear();
         UraDoraIndicator.Clear();
         KanTiles.Clear();
+        ClearOtherCalls();
         VictoryScreen=false;
 
         for (int j = 0; j < 4; j++)
-            if (!(TEST_HAND&&j==0))//Если тестовая рука то не набираем игроку руку из стены
+            if (!(TEST_HAND&&j==1))//Если тестовая рука то не набираем игроку руку из стены
             for (int i = 0; i < 13; i++)
             {
-                Players[j].AddTile(Wall[0],true);
+                Tile tile=new(Wall[0]);
+                Players[j].AddTile(tile,true);
                 Wall.RemoveAt(0);
             }
         for (int j = 0; j < 5; j++)
@@ -163,31 +160,31 @@ public class GameManager : MonoBehaviour
 
             var hand = new List<Tile>() //13 тайлов
             { 
-                new("Man", "1"),
                 new("Man", "2"),
                 new("Man", "3"),
-                new("Sou", "1"),
+                new("Man", "4"),
+                new("Pin", "5"),
+                new("Pin", "6"),
+                new("Pin", "6"),
+                new("Pin", "7"),
+                new("Pin", "7"),
+                new("Pin", "8"),
                 new("Sou", "2"),
-                new("Sou", "3"),
-                new("Pin", "1"),
-                new("Pin", "2"),
-                new("Man", "8"),
-                new("Dragon", "Green"),
-                new("Dragon", "Green"),
-                new("Dragon", "Green"),
-                new("Wind", "East"),
+                new("Sou", "4"),
+                new("Sou", "6"),
+                new("Sou", "6"),
             };
 
             foreach (var tile in hand)
             {
-                Players[0].AddTile(tile, true);
+                Players[1].AddTile(tile, true);
             }
 
                 TEST_TILES = new List<Tile>() //СПИСОК ТАЙЛОВ КОТОРЫЕ БУДУТ ВЫДАВАТЬСЯ ИГРОКУ
             {
-                new("Pin", "3"),
+                new("Sou", "1"),
                 //new("Dragon", "Red"),
-                new("Wind", "East")
+                new("Sou", "3")
             };
 
             TEST_TILES2 = new List<Tile>() //СПИСОК ТАЙЛОВ КОТОРЫЕ БУДЕТ СБРАСЫВАТЬ БОТ
@@ -200,33 +197,57 @@ public class GameManager : MonoBehaviour
 
         DorasShown = 1;
         DoraIndicatorView.Draw(DoraIndicator, DorasShown);
-        PlayerHandView.Draw(Players[0].Hand);
+       // Players[0].DrawHand();
 
         CenterView.UpdatePlayerBetView(Players);
         CenterView.UpdateWinds(Players[0].Wind, Players[1].Wind, Players[2].Wind, Players[3].Wind);
         CenterView.UpdateScore(Players[0].Score, Players[1].Score, Players[2].Score, Players[3].Score);
         CenterView.UpdateRoundWind(RoundWind);
         CenterView.UpdateBet(Bet);
-
-        PlayerHandView.Sort(Players[0].Hand);
-
-        //for (int i = 0; i < 4; i++)
-        //{
-        //    Players[0].Hand.RemoveAt(0);
-            
-        //}
-        //List<Tile> list = new List<Tile>() { new Tile("Man", "1", false, "Called"), new Tile("Man", "1", false, "Called"), new Tile("Man", "1"), new Tile("Man", "1") };
-        //Players[0].Calls.Add(list);
-        //Players[0].CallContainerView.Draw(Players[0].Calls);
-
+        foreach (var player in Players)
+        {
+            player.SortHand();
+            player.DrawHand();
+        }
         StartTurn();
     }
 
     public void ExhaustiveDraw()
     {
-        // Обработка ситуация, когда тайлы закончились
+        bool[]pays= new bool[4];
 
-        NextRound();
+        for (int i = 0; i < pays.Length; i++) 
+        {
+            if (Players[i].WaitCosts.Count >0)
+            {
+                pays[i] = false;
+                Players[i].PlayerHandView.DrawOpenHand(Players[i].Hand);
+            }
+            else
+            {
+                pays[i] = true;
+                Players[i].PlayerHandView.DrawCloseHand(Players[i].Hand);
+            }
+        }
+
+        int[] score_change = new int[4] {0,0,0,0};
+        var count1=pays.Count(t=>t);
+        var count2=pays.Count(t=>!t);
+
+        if (count1!=0&&count1!=Players.Count)
+        {
+            int loses = 3000 / count1;
+            int gains = 3000 / count2;
+            
+            for (int i = 0;i < 4;i++) 
+                if (pays[i]) score_change[i] = -loses;
+                else score_change[i] = gains;
+            
+        }
+
+        VictoryScreen = true;
+       StartCoroutine(VictoryScreenView.Draw(this, score_change));
+        //NextRound();
     }
 
     public void NextRound(int _Dealer=-1)
@@ -278,10 +299,7 @@ public class GameManager : MonoBehaviour
     }
 
     public void HandleTileClick(Tile clickedTile) 
-    {
-        //int[] x=new int[4];
-        //VictoryScreenView.Draw(Players[0],x , 0, new List<(string Yakus,int Cost)>());
-
+    {        
         if (!Players[0].IsActive|| VictoryScreen) return;
 
         if (Players[0].Riichi) //если игрок объявил риичи то если есть тайлы со свойством то это тайл которым он объявляет риичи
@@ -293,19 +311,20 @@ public class GameManager : MonoBehaviour
         if (Players[0].Riichi)
         {
             Players[0].UpgradeWaits(clickedTile);
-            Bet++;
-            Players[0].Score -= 1000;
-            CenterView.UpdateBet(Bet);
-            CenterView.UpdateScore(Players[0].Score, Players[1].Score, Players[2].Score, Players[3].Score);
-            CenterView.UpdatePlayerBetView(Players);
+            ProcessRiichi(Players[0]);
         }
         StartCoroutine(Players[0].DiscardTile(clickedTile));
         if (Players[0].Riichi) Players[0].Ippatsu = true;
-            Players[0].PlayerDiscardView.Draw(Players[0].Discard);
-        
-        
-        
+        Players[0].DrawDiscard();
+    }
 
+    public void ProcessRiichi(IPlayer player)
+    {
+        Bet++;
+        player.Score -= 1000;
+        CenterView.UpdateBet(Bet);
+        CenterView.UpdateScore(Players[0].Score, Players[1].Score, Players[2].Score, Players[3].Score);
+        CenterView.UpdatePlayerBetView(Players);
     }
 
     /// <summary>
@@ -322,7 +341,6 @@ public class GameManager : MonoBehaviour
             if (player.CheckForRon(tile))
             {
                 player.ron = (tile, sender);
-
             }
 
             if (player.Riichi) continue;
@@ -352,7 +370,11 @@ public class GameManager : MonoBehaviour
         }
         
         callsSent=Players.Count(x=>x.HasCalls());
-
+        if (callsSent == 0) 
+        {
+            EndTurn();
+            return;
+        }
         foreach (var player in Players)
         {
             if (player.HasCalls())
@@ -361,21 +383,26 @@ public class GameManager : MonoBehaviour
             }
             
         }
-        if (callsSent == 0) EndTurn();
+        
     }
 
-    public void Executecalls()
+    public IEnumerator Executecalls()
     {
         callsSent--;
-        if (callsSent > 0) return;
+        if (callsSent > 0) yield break ;
 
         foreach (var player in Players)
         {
             if (player.ron!=(null,null))
             {
+                //callTextViews[player.index].Draw("РОН!");
+                //yield return new WaitForSeconds(0.5f);
+                //callTextViews[player.index].Clear();
+
                 player.ExecuteRon();
+                ClearOtherCalls();
                 //EndTurn();
-                return;
+                yield break;
             }
         }
 
@@ -383,15 +410,25 @@ public class GameManager : MonoBehaviour
         {
             if (player.pon != (null, null))
             {
+                callTextViews[player.index].Draw("ПОН!");
+                yield return new WaitForSeconds(0.5f);
+                callTextViews[player.index].Clear();
+
                 player.ExecutePon();
+                ClearOtherCalls();
                 //EndTurn();
-                return;
+                yield break;
             }
             if (player.kan != (null, null))
                 {
+                callTextViews[player.index].Draw("КАН!");
+                yield return new WaitForSeconds(0.5f);
+                callTextViews[player.index].Clear();
+
                 player.ExecuteKan();
+                ClearOtherCalls();
                 //EndTurn();
-                return;
+                yield break;
             }
 
         }
@@ -400,29 +437,27 @@ public class GameManager : MonoBehaviour
         {
             if (player.chi != (null, null))                
             {
+                callTextViews[player.index].Draw("ЧИ!");
+                yield return new WaitForSeconds(0.5f);
+                callTextViews[player.index].Clear();
+
                 player.ExecuteChi(player.chi.Item1[0]);
+                ClearOtherCalls();
                 //EndTurn();
-                return;
+                yield break;
             }
         }
         EndTurn();
 
     }
 
-    // Вызывается из кнопок или у ИИ, когда игрок принял решение (вызвал пон/чи/кан или отказался)
-    public void OnCallDecisionMade(IPlayer player)
+    public void ClearOtherCalls()
     {
-        if (pendingCallPlayers.Contains(player))
+        foreach (var player in Players)
         {
-            pendingCallPlayers.Remove(player);
-            Debug.Log(player.Name + " принял решение по вызову.");
-        }
-        if (pendingCallPlayers.Count == 0)
-        {
-            EndTurn();
+            player.ClearCalls();
         }
     }
-
     public void RevealDora()
     {
         DorasShown++;
@@ -433,7 +468,7 @@ public class GameManager : MonoBehaviour
     {
         CallsButtonsView.Clear();
         VictoryScreen = true;
-        VictoryScreenView.Draw(player, score_change, han, yakus);
+        StartCoroutine(VictoryScreenView.Draw(player, score_change, han, yakus));
     }
 
     public List<Tile> GetDoras()

@@ -104,12 +104,13 @@ public class PlayerWind_Checker : IYakuChecker
 /// <summary>Пинфу</summary>
 public class Pinfu_Checker : IYakuChecker
 {
-
     /// <summary>Пинфу</summary>
     public (string yaku, int cost) Check(List<List<Tile>> blocks, IPlayer player)
     {
-        if (player.IsOpen) return (null, 0);
+        if (player.IsOpen)
+            return (null, 0);
 
+        // Выбираем только «мэнцаны» (сеты по три)
         var melds = blocks.Where(b => b.Count == 3).ToList();
         if (melds.Count != 4)
             return (null, 0);
@@ -118,39 +119,48 @@ public class Pinfu_Checker : IYakuChecker
         if (!melds.All(IsChi))
             return (null, 0);
 
-        // 6) Проверить, что выигрышный сет (последний в списке) образован двасторонним ожиданием
-        var lastMeld = blocks.Last();
+        // Берём последний именно из триплетов, а не просто последний блок
+        var lastMeld = melds.Last();
+
+        // Плюс на всякий случай проверяем длину на всякий случай
+        if (lastMeld.Count < 3)
+            return (null, 0);
+
+        // Тайл, которым завершили, — последний в этом сете
         var winningTile = lastMeld.Last();
 
-        // Два тайла до выигрышного
+        // Два тайла до выигрышного — это первые два в отсортированном сете
         var firstTwo = lastMeld
             .Take(2)
             .OrderBy(t => t.TryGetRankAsInt())
             .ToList();
 
+        // Если не два элемента — выходим
+        if (firstTwo.Count != 2)
+            return (null, 0);
+
+        // 6) Проверить, что выигрышный сет образован двасторонним ожиданием
         if (!IsTwoSidedWait(firstTwo))
             return (null, 0);
 
         // Все условия пинфу выполнены
         return ("Пинфу", 1);
-
     }
 
     private bool IsTwoSidedWait(List<Tile> tiles)
     {
         int r1 = tiles[0].TryGetRankAsInt();
         int r2 = tiles[1].TryGetRankAsInt();
-        // последовательные по рангу, и оба не на "краях" (1-2 или 8-9)
+        // последовательные по рангу и не на «краях» (1-2 или 8-9)
         return (r2 - r1 == 1) && (r1 > 1) && (r2 < 9);
     }
 
     private bool IsChi(List<Tile> block)
     {
-        if (block[0].Suit == "Dragon" || block[0].Suit == "Wind") return false;
-        var sorted = block
-            .OrderBy(t => t.TryGetRankAsInt())
-            .ToList();
+        if (block[0].Suit == "Dragon" || block[0].Suit == "Wind")
+            return false;
 
+        var sorted = block.OrderBy(t => t.TryGetRankAsInt()).ToList();
         return sorted[0].Suit == sorted[1].Suit
             && sorted[1].Suit == sorted[2].Suit
             && sorted[1].TryGetRankAsInt() - sorted[0].TryGetRankAsInt() == 1

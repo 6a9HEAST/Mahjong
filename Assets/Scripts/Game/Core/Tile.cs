@@ -1,11 +1,5 @@
-using NUnit.Framework;
-using UnityEngine;
-using UnityEngine.EventSystems;
 using System.Collections.Generic;
-using Unity.VisualScripting;
-using System.Xml.Linq;
 using System;
-using static UnityEngine.InputManagerEntry;
 
 public class Tile 
 {

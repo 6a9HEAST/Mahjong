@@ -305,7 +305,6 @@ public class VictoryScreenView : MonoBehaviour
         // ”станавливаем начальные значени€ дл€ анимации
         scoreText.text = startScore.ToString();
         deltaText.text = $"{(initialDelta > 0 ? "+" : "")}{initialDelta}";
-
         while (timer < duration)
         {
             timer += Time.deltaTime;

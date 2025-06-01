@@ -7,9 +7,6 @@ using UnityEngine;
 using UnityEngine.XR;
 using Unity.Burst.Intrinsics;
 
-
-
-
 public abstract class IPlayer
 {
     public string Name { get; set; }
@@ -55,6 +52,7 @@ public abstract class IPlayer
                 kan = (tile, this);
                 ProceedCalls();
             }
+
 
         }
         if (TileCounts.ContainsKey(tile.ToString()))
@@ -314,9 +312,12 @@ public abstract class IPlayer
 
         foreach (var tile in Hand) tile.RemoveDiscardable();
         GameManager.RonTsumoPopUpView.Draw("Цумо!");
+        GameManager.AudioPlayer.StopMusic();
+        GameManager.AudioPlayer.PlayRonTsumo();
         PlayerHandView.DrawOpenHand(Hand);
         var round_end = new RoundEndCalculator();
         round_end.CountTsumoPoints(this, wait_cost.Costs);
+        
 
     }
     public void ExecuteRon()
@@ -344,7 +345,11 @@ public abstract class IPlayer
         Hand.Add(ron.tile);
 
         foreach (var tile in Hand) tile.RemoveDiscardable();
+
         GameManager.RonTsumoPopUpView.Draw("Рон!");
+        GameManager.AudioPlayer.StopMusic();
+        GameManager.AudioPlayer.PlayRonTsumo();
+
         PlayerHandView.DrawOpenHand(Hand);
 
         var round_end = new RoundEndCalculator();
@@ -353,7 +358,6 @@ public abstract class IPlayer
     public void TryAddDiscardWaitCost(DiscardWaitCost x)
     {
         Debug.Log(this.Name + " Try add wait cost");
-        bool debug_check = false;
         // Ищем существующий элемент с таким же Discard
         var existing = DiscardWaitCosts.FirstOrDefault(c => c.Discard.Equals(x.Discard));
 
@@ -377,7 +381,6 @@ public abstract class IPlayer
             {
                 if (tile.Equals(x.Discard) && !tile.IsDiscardable())
                 {
-                    debug_check = true;
                     tile.AddDiscardable();
                 }
             }
@@ -419,7 +422,7 @@ public abstract class IPlayer
 
         SortHand();
         DrawHand();
-
+        //GameManager.AudioPlayer.PlayTileDiscard();
         Discard.Add(tile);
         PlayerDiscardView.Draw(Discard);
 
@@ -517,7 +520,13 @@ public abstract class IPlayer
         foreach (var waitcost in WaitCosts)
         {
             if (waitcost.Wait.Equals(tile))
+                if (waitcost.Costs.Count(t=>t.Yaku!="Fu")>0)
                 return true;
+                else
+                {
+                    TemporaryFuriten = true;
+                    return false;
+                }
         }
         return false;
     }
@@ -645,7 +654,7 @@ public class AiPlayer : IPlayer
 
     public IEnumerator MakeMove()
     {
-        yield return new WaitForSeconds(0.7f);
+        yield return GameManager.WAIT_TIME;
 
         if (CheckForTsumo()) yield break ; //если есть цумо или автосброс в риичи то return
 

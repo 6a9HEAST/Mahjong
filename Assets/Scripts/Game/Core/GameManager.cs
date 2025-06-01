@@ -1,16 +1,15 @@
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
-using Unity.VisualScripting;
-using UnityEngine;
+using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
     public List<IHandView> HandViews;
-
+    public HandGenerateView HandGenerateView;
     public List<IDiscardView> playerDiscardViews;
 
     public List<CallContainerView> playerCallContainerViews;
@@ -22,8 +21,15 @@ public class GameManager : MonoBehaviour
     public DoraIndicatorView DoraIndicatorView;
     public CallsButtonsView CallsButtonsView;
     public GameEndScreenView GameEndScreenView;
+    public InGameMenuView InGameMenuView;
+    public TutorialManager TutorialManager;
+    public Button InGameMenuButton;
+
     public RoundNumberPopupView RoundNumberPopupView;
     public RonTsumoPopUpView RonTsumoPopUpView;
+    public DrawPopUpView DrawPopUpView;
+
+    public AudioPlayer AudioPlayer;
 
     public List<IPlayer> Players { get; private set; }
     public List<Tile> Wall { get; private set; }
@@ -46,7 +52,10 @@ public class GameManager : MonoBehaviour
     public List<Tile> TEST_TILES=new();
     public List<Tile> TEST_TILES2=new();
 
-    public WaitForSeconds WAIT_TIME = new(0.3f);
+
+    public float waitTime=1.0f;
+
+    public WaitForSeconds WAIT_TIME;
 
     public bool DISPLAY_TILE_RED_NUMBER=true;
 
@@ -60,15 +69,24 @@ public class GameManager : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject);
+            //Destroy(gameObject);
             return;
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
 
-    private void Start()
+    private void OnEnable()
     {
+        Initiate();
+    }
+
+    private void Initiate()
+    {
+        WAIT_TIME = new(waitTime);
+        
+
+        InGameMenuButton.onClick.AddListener(() => SwitchInGameMenu());
         Bet = 0;
         TileSpriteManager.Initialize();
 
@@ -93,6 +111,7 @@ public class GameManager : MonoBehaviour
             text.Clear();
         CallsButtonsView.player = Players[0];
         ActivePlayer = -1;
+        //AudioPlayer.PlayMusic();
         StartCoroutine(PrepareRound());
     }
 
@@ -148,6 +167,8 @@ public class GameManager : MonoBehaviour
 
     public IEnumerator PrepareRound() 
     {
+        //HandGenerateView.Generate();
+        //yield break;
         SetWinds();
 
         Wall = TileFactory.CreateWall();
@@ -247,16 +268,20 @@ public class GameManager : MonoBehaviour
                 tilesInWall-=added[i];
                 CenterView.UpdateTilesRemaining(tilesInWall);
                 CenterView.TurnWindLightOn(index, false);
+                AudioPlayer.PlayHandFill();
                 yield return StartCoroutine(AnimateHandFilling(Players[index], tilesToDraw));
                 index = (index + 1) % 4;
             }
         }
         yield return new WaitForSeconds(0.2f);
+        AudioPlayer.PlayMusic();
         StartTurn();
     }
 
     public void ExhaustiveDraw()
     {
+        DrawPopUpView.Draw();
+        AudioPlayer.StopMusic();
         bool[]pays= new bool[4];
 
         foreach (var player in Players)
@@ -356,7 +381,7 @@ public class GameManager : MonoBehaviour
 
     public void HandleTileClick(Tile clickedTile) 
     {        
-        if (!Players[0].IsActive|| VictoryScreen) return;
+        if (!Players[0].IsActive|| VictoryScreen || TutorialOpened) return;
 
         if (Players[0].Riichi) //если игрок объявил риичи то если есть тайлы со свойством то это тайл которым он объявляет риичи
             if (clickedTile.IsDiscardable())
@@ -377,12 +402,13 @@ public class GameManager : MonoBehaviour
 
     public void HandleTileHoverEnter(TileView t)
     {
-        if (!Players[0].IsActive || VictoryScreen) return;
+        if (!Players[0].IsActive || VictoryScreen || TutorialOpened) return;
+        AudioPlayer.PlayTileHover();
         t.EnableYellowArrow();
     }
     public void HandleTileHoverExit(TileView t)
     {
-        if (!Players[0].IsActive || VictoryScreen) return;
+        if (!Players[0].IsActive || VictoryScreen || TutorialOpened) return;
         t.DisableYellowArrow();
     }
 
@@ -440,25 +466,30 @@ public class GameManager : MonoBehaviour
         callsSent=Players.Count(x=>x.HasCalls());
         if (callsSent == 0) 
         {
+            AudioPlayer.PlayTileDiscard();
             EndTurn();
             return;
         }
+        
         foreach (var player in Players)
         {
             if (player.HasCalls())
             {
+                if (player.index==0) sent_to_player = true;
                 player.ProceedCalls();
             }
             
         }
-        
-    }
+        if (sent_to_player) AudioPlayer.PlayTileDiscard();
+        //sent_to_player = false;
 
+    }
+    bool sent_to_player = false;
     public IEnumerator Executecalls()
     {
         callsSent--;
         if (callsSent > 0) yield break ;
-
+        
         foreach (var player in Players)
         {
             if (player.ron!=(null,null))
@@ -469,6 +500,7 @@ public class GameManager : MonoBehaviour
 
                 player.ExecuteRon();
                 ClearOtherCalls();
+                sent_to_player = false;
                 //EndTurn();
                 yield break;
             }
@@ -479,22 +511,28 @@ public class GameManager : MonoBehaviour
             if (player.pon != (null, null))
             {
                 callTextViews[player.index].Draw("ПОН!");
+                AudioPlayer.PlayCallSound();
                 yield return new WaitForSeconds(0.5f);
+                AudioPlayer.PlayCallTaking();
                 callTextViews[player.index].Clear();
 
                 player.ExecutePon();
                 ClearOtherCalls();
+                sent_to_player = false;
                 //EndTurn();
                 yield break;
             }
             if (player.kan != (null, null))
                 {
                 callTextViews[player.index].Draw("КАН!");
+                AudioPlayer.PlayCallSound();
                 yield return new WaitForSeconds(0.5f);
+                AudioPlayer.PlayCallTaking();
                 callTextViews[player.index].Clear();
 
                 player.ExecuteKan();
                 ClearOtherCalls();
+                sent_to_player = false;
                 //EndTurn();
                 yield break;
             }
@@ -506,15 +544,20 @@ public class GameManager : MonoBehaviour
             if (player.chi != (null, null))                
             {
                 callTextViews[player.index].Draw("ЧИ!");
+                AudioPlayer.PlayCallSound();
                 yield return new WaitForSeconds(0.5f);
+                AudioPlayer.PlayCallTaking();
                 callTextViews[player.index].Clear();
 
                 player.ExecuteChi(player.chi.Item1[0]);
                 ClearOtherCalls();
+                sent_to_player = false;
                 //EndTurn();
                 yield break;
             }
         }
+        if (!sent_to_player) AudioPlayer.PlayTileDiscard();
+        sent_to_player = false;
         EndTurn();
 
     }
@@ -524,6 +567,7 @@ public class GameManager : MonoBehaviour
         foreach (var player in Players)
         {
             player.ClearCalls();
+            
         }
     }
     public void RevealDora()
@@ -649,5 +693,26 @@ public class GameManager : MonoBehaviour
     public bool GetDisplayRedNumberSetting()
     {
         return DISPLAY_TILE_RED_NUMBER;
+    }
+
+    public bool TutorialOpened=false;
+    public void OpenTutorial()
+    {
+        TutorialOpened = true;
+        TutorialManager.Open();
+    }
+    private bool opened;
+    public void SwitchInGameMenu()
+    {
+        if (opened)
+        { 
+            InGameMenuView.Close();
+            opened = false;
+        }
+        else
+        {
+            InGameMenuView.Open();
+            opened = true;
+        }
     }
 }

@@ -36,13 +36,13 @@ public class GamePrepareView : MonoBehaviour
             buttonComponent.onClick.AddListener(() => OnOkButtonClicked());
         }
 
-        buttonComponent = CancelButton.GetComponent<Button>();
-        if (buttonComponent != null)
-        {
-            buttonComponent.onClick.RemoveAllListeners();
+        //buttonComponent = CancelButton.GetComponent<Button>();
+        //if (buttonComponent != null)
+        //{
+        //    buttonComponent.onClick.RemoveAllListeners();
 
-            buttonComponent.onClick.AddListener(() => OnCancelButtonClicked());
-        }
+        //    buttonComponent.onClick.AddListener(() => OnCancelButtonClicked());
+        //}
 
         buttonComponent = gameLenghts[0].GetComponent<Button>();
         if (buttonComponent != null)
@@ -72,12 +72,6 @@ public class GamePrepareView : MonoBehaviour
     public void OnOkButtonClicked()
     {
 
-    }
-
-    public void OnCancelButtonClicked()
-    {
-        Itself.SetActive(false);
-        MenuManager.ShowButtonBox();
     }
 
     public void On1LenghtClecked()

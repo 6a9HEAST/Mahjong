@@ -11,7 +11,7 @@ public class MainMenuButtons
         MenuManager = menuManager;
     }
 
-    public void CreateButtons(List<Transform> buttons)
+    public void CreateButtons(List<GameObject> buttons)
     {
         if (buttons.Count == 0) return;
 
@@ -22,47 +22,48 @@ public class MainMenuButtons
 
     }
 
-    public void CreatePlayButton(Transform button)
+    public void CreatePlayButton(GameObject button)
     {
         Button buttonComponent = button.GetComponent<Button>();
         if (buttonComponent != null)
         {
             buttonComponent.onClick.RemoveAllListeners();
 
-            buttonComponent.onClick.AddListener(() => MenuManager.OnPlayButtonClicked());
+            buttonComponent.onClick.AddListener(() => MenuManager.StartCoroutine(MenuManager.OnPlayButtonClicked(button)));
         }
     }
 
-    public void CreateHelpButton(Transform button)
+    public void CreateHelpButton(GameObject button)
     {
         Button buttonComponent = button.GetComponent<Button>();
         if (buttonComponent != null)
         {
             buttonComponent.onClick.RemoveAllListeners();
 
-            buttonComponent.onClick.AddListener(() => MenuManager.OnHelpButtonClicked());
+            buttonComponent.onClick.AddListener(() => MenuManager.StartCoroutine(MenuManager.OnHelpButtonClicked(button)));
+            
         }
     }
 
-    public void CreateSettingsButton(Transform button)
+    public void CreateSettingsButton(GameObject button)
     {
         Button buttonComponent = button.GetComponent<Button>();
         if (buttonComponent != null)
         {
             buttonComponent.onClick.RemoveAllListeners();
 
-            buttonComponent.onClick.AddListener(() => MenuManager.OnSettingsButtonClicked());
+            buttonComponent.onClick.AddListener(() => MenuManager.StartCoroutine(MenuManager.OnSettingsButtonClicked(button)));
         }
     }
 
-    public void CreateExitButton(Transform button)
+    public void CreateExitButton(GameObject button)
     {
         Button buttonComponent = button.GetComponent<Button>();
         if (buttonComponent != null)
         {
             buttonComponent.onClick.RemoveAllListeners();
 
-            buttonComponent.onClick.AddListener(() => MenuManager.OnExitButtonClicked());
+            buttonComponent.onClick.AddListener(() => MenuManager.StartCoroutine(MenuManager.OnExitButtonClicked(button)));
         }
     }
 }

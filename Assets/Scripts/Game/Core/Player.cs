@@ -733,7 +733,7 @@ public class AiPlayer : IPlayer
             return true;
 
         }
-        return false;
+        else return false;
     }
 
     public override void UpgradeWaits(Tile tile)// OVERRIDE

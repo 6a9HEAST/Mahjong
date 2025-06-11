@@ -2685,7 +2685,7 @@ MonoBehaviour:
   TilePrefab: {fileID: 8707412784265864967}
   TurnedTilePrefab: {fileID: 7185411110426134044}
   TileBackPrefab: {fileID: 1275032583}
-  threeTilesSpacing: 1.23
+  threeTilesSpacing: 1.56
   pairSpacing: 1.23
   kanSpacing: 1.56
   startOrder: 5

@@ -14,7 +14,7 @@ public static class TileFactory
                 int k = 4;
                 if (i==5) //Добавление красных пятерок вместо одной из 4 пятерок
                 { 
-                    wall.Add(new Tile(suit,i.ToString(),false,"Red"));
+                    wall.Add(new Tile(suit,i.ToString(),"Red"));
                     k--;
                 }
 
@@ -32,7 +32,7 @@ public static class TileFactory
         {
             for (int j = 0; j < 4; j++)
             {
-                wall.Add(new Tile("Wind", wind, true));
+                wall.Add(new Tile("Wind", wind));
             }
         }
 
@@ -42,7 +42,7 @@ public static class TileFactory
         {
             for (int j = 0; j < 4; j++)
             {
-                wall.Add(new Tile("Dragon", dragon, true));
+                wall.Add(new Tile("Dragon", dragon));
             }
         }
 

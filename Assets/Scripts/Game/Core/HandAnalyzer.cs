@@ -16,20 +16,16 @@ public class HandAnalyzer
 
     public void AnalyzeHand()
     {
-        //if (Player.index==0)
-        //    Debug.Log(" AnalyzeHand. Last Lile: " + Player.Hand[^1]+". HandCount= "+Player.Hand.Count);
-        //if (Player.index != 0) return;
-        // Создание копии руки игрока
         List<Tile> sortedHand = new List<Tile>(Player.Hand);
         Sort(sortedHand);
 
-        // Добавление объявленных комбинаций (calls) в список готовых блоков
+        // Добавление объявлений в список готовых блоков
         List<List<Tile>> initialBlocks = new List<List<Tile>>();
         if (Player.Calls != null)
             initialBlocks.AddRange(Player.Calls);
 
         _processedStates = new HashSet<string>();
-        // Запускаем рекурсивный анализ с кешем состояний
+        
         RecursiveAnalyze(sortedHand, initialBlocks, initialBlocks.Count, 0, _processedStates);
     }
 

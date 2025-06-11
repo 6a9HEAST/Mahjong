@@ -7,7 +7,7 @@ public class YakuAnalyser
 {
 
     IPlayer Player { get; set; }
-    public List<IYakuChecker> Checkers { get; set; }
+    public List<IYaku> Checkers { get; set; }
     public List<(string yaku, int cost)> handCost { get; set; }
     public YakuAnalyser(IPlayer player)
     {
@@ -18,29 +18,29 @@ public class YakuAnalyser
 
     public void CreateCheckers()
     {
-        Checkers = new List<IYakuChecker>()
+        Checkers = new List<IYaku>()
         {
-            new Tanyao_Checker(),
-            new RedDragon_Checker(),
-            new GreenDragon_Checker(),
-            new WhteDragon_Checker(),
-            new RoundWind_Checker(),
-            new PlayerWind_Checker(),
-            new Pinfu_Checker(),
-            new SevenPairs_Checker(),
-            new Iipeikou_Ryanpeikou_Checker(),
-            new Sanshoku_Checker(),
-            new Ittsuu_Checker(),
-            new Toitoi_Checker(),
-            new Sanankou_Checker(),
-            new Sankantsu_Checker(),
-            new Sanshoku_triplets_Checker(),
-            new Chanta_Checker (),
-            new Junchan_Checker (),
-            new Honitsu_Checker(),
-            new Chinitsu_Checker (),
-            new Honroto_Checker(),
-            new Shosangen_Checker (),
+            new Tanyao(),
+            new RedDragon(),
+            new GreenDragon(),
+            new WhteDragon(),
+            new RoundWind(),
+            new PlayerWind(),
+            new Pinfu(),
+            new SevenPairs(),
+            new Iipeikou_Ryanpeikou(),
+            new Sanshoku(),
+            new Ittsuu(),
+            new Toitoi(),
+            new Sanankou(),
+            new Sankantsu(),
+            new Sanshoku_triplets(),
+            new Chanta (),
+            new Junchan (),
+            new Honitsu(),
+            new Chinitsu (),
+            new Honroto(),
+            new Shosangen (),
         };
     }
 

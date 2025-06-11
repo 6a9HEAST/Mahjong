@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.XR;
 
-public interface IYakuChecker
+public interface IYaku
 {
     /// <summary>Возвращает количество ханов, если руку удовлетворяет условию, иначе 0.</summary>
     (string yaku,int cost) Check(List<List<Tile>> blocks,IPlayer player);
@@ -12,7 +12,7 @@ public interface IYakuChecker
 
 
 /// <summary>Таняо</summary>
-public class Tanyao_Checker : IYakuChecker
+public class Tanyao : IYaku
 {
 
     /// <summary>Таньяо</summary>
@@ -27,7 +27,7 @@ public class Tanyao_Checker : IYakuChecker
 }
 
 /// <summary>Красный дракон</summary>
-public class RedDragon_Checker : IYakuChecker
+public class RedDragon : IYaku
 {
 
     /// <summary>Якухай</summary>
@@ -42,7 +42,7 @@ public class RedDragon_Checker : IYakuChecker
 }
 
 /// <summary>Зеленый дракон</summary>
-public class GreenDragon_Checker : IYakuChecker
+public class GreenDragon : IYaku
 {
 
     /// <summary>Якухай</summary>
@@ -57,7 +57,7 @@ public class GreenDragon_Checker : IYakuChecker
 }
 
 /// <summary>Белый дракон</summary>
-public class WhteDragon_Checker : IYakuChecker
+public class WhteDragon : IYaku
 {
 
     /// <summary>Якухай</summary>
@@ -72,7 +72,7 @@ public class WhteDragon_Checker : IYakuChecker
 }
 
 /// <summary>Ветер раунда</summary>
-public class RoundWind_Checker : IYakuChecker
+public class RoundWind : IYaku
 {
 
     /// <summary>Ветер раунда</summary>
@@ -87,7 +87,7 @@ public class RoundWind_Checker : IYakuChecker
 }
 
 /// <summary>Ветер игрока</summary>
-public class PlayerWind_Checker : IYakuChecker
+public class PlayerWind : IYaku
 {
 
     /// <summary>Ветер игрока</summary>
@@ -102,7 +102,7 @@ public class PlayerWind_Checker : IYakuChecker
 }
 
 /// <summary>Пинфу</summary>
-public class Pinfu_Checker : IYakuChecker
+public class Pinfu : IYaku
 {
     /// <summary>Пинфу</summary>
     public (string yaku, int cost) Check(List<List<Tile>> blocks, IPlayer player)
@@ -169,7 +169,7 @@ public class Pinfu_Checker : IYakuChecker
 }
 
 /// <summary>Семь пар</summary>
-public class SevenPairs_Checker : IYakuChecker
+public class SevenPairs : IYaku
 {
 
     /// <summary>Семь пар</summary>
@@ -207,7 +207,7 @@ public class SevenPairs_Checker : IYakuChecker
 }
 
 /// <summary>Две одинаковые последовательности(ипейко) или две по две (рянпейко)</summary>
-public class Iipeikou_Ryanpeikou_Checker : IYakuChecker
+public class Iipeikou_Ryanpeikou : IYaku
 {
 
     /// <summary>Две одинаковые последовательности(ипейко) или две по две (рянпейко)</summary>
@@ -260,7 +260,7 @@ public class Iipeikou_Ryanpeikou_Checker : IYakuChecker
 }
 
 /// <summary>Саншоку</summary>
-public class Sanshoku_Checker : IYakuChecker
+public class Sanshoku : IYaku
 {
 
     /// <summary>Саншоку</summary>
@@ -324,7 +324,7 @@ public class Sanshoku_Checker : IYakuChecker
 }
 
 /// <summary>Стрит</summary>
-public class Ittsuu_Checker : IYakuChecker
+public class Ittsuu : IYaku
 {
 
     /// <summary>Стрит</summary>
@@ -368,7 +368,7 @@ public class Ittsuu_Checker : IYakuChecker
 }
 
 /// <summary>Тойтой/все тройки</summary>
-public class Toitoi_Checker : IYakuChecker
+public class Toitoi : IYaku
 {
     public (string yaku, int cost) Check(List<List<Tile>> blocks, IPlayer player)
     {
@@ -422,7 +422,7 @@ public class Toitoi_Checker : IYakuChecker
 }
 
 /// <summary>Сананко/три закрытых тройки</summary>
-public class Sanankou_Checker : IYakuChecker
+public class Sanankou : IYaku
 {
     public (string yaku, int cost) Check(List<List<Tile>> blocks, IPlayer player)
     {
@@ -467,7 +467,7 @@ public class Sanankou_Checker : IYakuChecker
 }
 
 /// <summary>Санканцу/три кана</summary>
-public class Sankantsu_Checker : IYakuChecker
+public class Sankantsu : IYaku
 {
 
     
@@ -488,7 +488,7 @@ public class Sankantsu_Checker : IYakuChecker
 }
 
 /// <summary>Саншоку доко</summary>
-public class Sanshoku_triplets_Checker : IYakuChecker
+public class Sanshoku_triplets : IYaku
 {
 
     
@@ -523,7 +523,7 @@ public class Sanshoku_triplets_Checker : IYakuChecker
 }
 
 /// <summary>Чанта/все сеты и пара содержат хотя бы один не средний тайл</summary>
-public class Chanta_Checker : IYakuChecker
+public class Chanta : IYaku
 {
 
     
@@ -603,7 +603,7 @@ public class Chanta_Checker : IYakuChecker
 }
 
 /// <summary>Джунчан/все сеты и пара содержат хотя бы один терминал</summary>
-public class Junchan_Checker : IYakuChecker
+public class Junchan : IYaku
 {
 
     
@@ -670,7 +670,7 @@ public class Junchan_Checker : IYakuChecker
 }
 
 /// <summary>Хоницу</summary>
-public class Honitsu_Checker : IYakuChecker
+public class Honitsu : IYaku
 {
 
     
@@ -702,7 +702,7 @@ public class Honitsu_Checker : IYakuChecker
 }
 
 /// <summary>Чиницу</summary>
-public class Chinitsu_Checker : IYakuChecker
+public class Chinitsu : IYaku
 {
 
     /// <summary>Якухай</summary>
@@ -733,10 +733,10 @@ public class Chinitsu_Checker : IYakuChecker
 }
 
 /// <summary>Хонрото</summary>
-public class Honroto_Checker : IYakuChecker
+public class Honroto : IYaku
 {
 
-    /// <summary>Якухай</summary>
+    
     public (string yaku, int cost) Check(List<List<Tile>> blocks, IPlayer player)
     {
         var allTiles = blocks.SelectMany(b => b).ToList();
@@ -770,7 +770,7 @@ public class Honroto_Checker : IYakuChecker
 }
 
 /// <summary>Сёнсанген</summary>
-public class Shosangen_Checker : IYakuChecker
+public class Shosangen : IYaku
 {
     public (string yaku, int cost) Check(List<List<Tile>> blocks, IPlayer player)
     {

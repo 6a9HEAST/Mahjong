@@ -5,18 +5,13 @@ public class Tile
 {
     public string Suit { get; private set; }  // Масть (ман, пин, соу, драконы и ветры)
     public string Rank { get; private set; }    // Номер (1-9)
-    public bool IsHonor { get; private set; } // Почётные плитки
 
     public List<string> Properties { get; private set; }
 
-    public Tile(string suit, string rank, bool isHonor = false,string property=null)
+    public Tile(string suit, string rank,string property=null)
     {
         Suit = suit;
-        Rank = rank;
-        if (suit == "Dragon" || suit == "Wind")
-            IsHonor = true;
-        else IsHonor = false;
-        //IsHonor = isHonor;
+        Rank = rank;        
         Properties = new List<string>();
         if (property != null ) Properties.Add(property);
     }

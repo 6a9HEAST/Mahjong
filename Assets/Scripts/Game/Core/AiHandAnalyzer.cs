@@ -236,7 +236,7 @@ public static class ShantenCalculator
 
         foreach (var t in hand)
         {
-            if (t.IsHonor)
+            if (t.Suit=="Wind"|| t.Suit == "Dragon")
                 honor[HonorIndex(t)]++;
             else
             {

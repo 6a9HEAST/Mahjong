@@ -11,6 +11,7 @@ public class MenuManager : MonoBehaviour
     public List<GameObject> Buttons;
     public GamePrepareView GamePrepareView;
     public MenuAudioPlayer AudioPlayer;
+    public GameObject ButtonsScreen;
 
     public float LightScale = 1.0f;
     public float AnimationTime = 0.5f;
@@ -39,8 +40,18 @@ public class MenuManager : MonoBehaviour
         AudioPlayer.PlayButtonClick();
         var light=button.GetComponent<ButtonHover>().Light;
         yield return StartCoroutine(ScaleToTarget(light));
-        StartGame();
+        SetDefaultScale(light);
+        OpenPrepareScreen();
+        HideButtons();
+        //StartGame();
     }
+
+    public void OpenPrepareScreen()
+    {
+        GamePrepareView.Show(this);
+    }
+
+    
 
     public IEnumerator OnSettingsButtonClicked(GameObject button)
     {
@@ -69,11 +80,26 @@ public class MenuManager : MonoBehaviour
         Application.Quit();
     }
 
-    public void HideButtons(GameObject _buton)
+    public void HideButtons(GameObject _button=null)
     {
         foreach (var button in Buttons)
-            if (button!=_buton)
+            if (_button==null)
+            {
                 button.SetActive(false);
+                ButtonsScreen.SetActive(false);
+            }
+            else 
+            if (button == _button)
+                button.SetActive(true);
+            else button.SetActive(false);
+
+    }
+
+    public void ShowButtons()
+    {
+        foreach (var button in Buttons)
+            button.SetActive(true);
+        ButtonsScreen.SetActive(true);
     }
 
     private IEnumerator ScaleToTarget(GameObject Light)
@@ -99,5 +125,11 @@ public class MenuManager : MonoBehaviour
         // В конце принудительно ставим точный целевой масштаб
         rect.localScale = targetScale;
         yield return new WaitForSeconds(0.2f);
+    }
+    
+    private void SetDefaultScale(GameObject Light)
+    {
+        var rect = Light.GetComponent<RectTransform>();
+        rect.localScale = Vector3.one;
     }
 }

@@ -2,10 +2,9 @@ using static System.Math;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.XR;
-using Unity.Burst.Intrinsics;
+using Unity.VisualScripting;
+
 
 public abstract class IPlayer
 {
@@ -656,6 +655,13 @@ public class AiPlayer : IPlayer
     {
         yield return GameManager.WAIT_TIME;
 
+        if (!GameSettings.MediumAiDifficulty)
+        {
+            int index = Random.Range(0, Hand.Count);
+            GameManager.StartCoroutine(DiscardTile(Hand[index]));
+            yield break;
+        }
+
         if (CheckForTsumo()) yield break ; //если есть цумо или автосброс в риичи то return
 
         if (TryDeclareRiichi()) yield break; //если можно объ€вить риичи то return
@@ -669,6 +675,8 @@ public class AiPlayer : IPlayer
 
     public override void ProceedCalls()
     {
+        if (!GameSettings.MediumAiDifficulty) return;
+
         if (ron != (null, null))
         {
             CallRon();

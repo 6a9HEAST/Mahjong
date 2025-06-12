@@ -8,14 +8,23 @@ public class GamePrepareView : MonoBehaviour
     public GameObject Itself;
     public Transform OkButton;
     public Transform CancelButton;
-    public List<Transform> gameLenghts;
-    
-    public MenuManager MenuManager { get; private set; }
+    public List<Transform> DifficultyButtons;
+    public MenuManager MenuManager { get; set; }
+
     public void Start()
     {
+        if (OkButton != null && CancelButton != null && CheckButtons())
+            CreateButtons();
         Itself.SetActive(false);
-        if (OkButton!=null&&CancelButton!=null&&gameLenghts.Count>0)
-        CreateButtons();
+       
+    }
+
+    private bool CheckButtons()
+    {
+        bool result = true;
+        if (DifficultyButtons.Count == 0) result = false;
+
+        return result;
     }
     public void Show(MenuManager menuManager)
     {
@@ -24,6 +33,11 @@ public class GamePrepareView : MonoBehaviour
         {
             MenuManager = menuManager;
         }
+    }
+
+    public void Hide()
+    {
+        Itself.SetActive(false);
     }
 
     public void CreateButtons()
@@ -36,62 +50,48 @@ public class GamePrepareView : MonoBehaviour
             buttonComponent.onClick.AddListener(() => OnOkButtonClicked());
         }
 
-        //buttonComponent = CancelButton.GetComponent<Button>();
-        //if (buttonComponent != null)
-        //{
-        //    buttonComponent.onClick.RemoveAllListeners();
-
-        //    buttonComponent.onClick.AddListener(() => OnCancelButtonClicked());
-        //}
-
-        buttonComponent = gameLenghts[0].GetComponent<Button>();
+        buttonComponent = CancelButton.GetComponent<Button>();
         if (buttonComponent != null)
         {
             buttonComponent.onClick.RemoveAllListeners();
 
-            buttonComponent.onClick.AddListener(() => On1LenghtClecked());
+            buttonComponent.onClick.AddListener(() => OnCancelButtonClicked());
         }
 
-        buttonComponent = gameLenghts[1].GetComponent<Button>();
+        buttonComponent = DifficultyButtons[0].GetComponent<Button>();
         if (buttonComponent != null)
         {
             buttonComponent.onClick.RemoveAllListeners();
 
-            buttonComponent.onClick.AddListener(() => On2LenghtClecked());
+            buttonComponent.onClick.AddListener(() => OnEasyDifficultyClicked());
         }
 
-        buttonComponent = gameLenghts[2].GetComponent<Button>();
+        buttonComponent = DifficultyButtons[1].GetComponent<Button>();
         if (buttonComponent != null)
         {
             buttonComponent.onClick.RemoveAllListeners();
 
-            buttonComponent.onClick.AddListener(() => On3LenghtClecked());
+            buttonComponent.onClick.AddListener(() => OnMediumDifficultyClicked());
         }
     }
 
     public void OnOkButtonClicked()
     {
-
+        MenuManager.StartGame();
     }
 
-    public void On1LenghtClecked()
+    public void OnCancelButtonClicked()
     {
-
-    }
-    public void On2LenghtClecked()
-    {
-
-    }
-    public void On3LenghtClecked()
-    {
-
+        MenuManager.ShowButtons();
+        Itself.SetActive(false);
     }
 
-
-
-    // Update is called once per frame
-    void Update()
+    public void OnEasyDifficultyClicked()
     {
-        
+        GameSettings.MediumAiDifficulty = false;
+    }
+    public void OnMediumDifficultyClicked()
+    {
+        GameSettings.MediumAiDifficulty = true;
     }
 }
